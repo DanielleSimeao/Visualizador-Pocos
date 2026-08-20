@@ -9,69 +9,124 @@
 
     <title>Visualizador de Poços</title>
 
-    <!-- Leaflet -->
+
+    <!-- =====================================================
+         LEAFLET
+         ===================================================== -->
+
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
 
+
+    <!-- =====================================================
+         ESTILO DA PÁGINA
+         ===================================================== -->
+
     <style>
 
         :root {
+
             --azul-escuro: #1f3a5f;
+
             --azul-texto: #43566f;
+
             --cinza-claro: #f4f6f8;
+
             --cinza-medio: #d9dee5;
+
             --texto: #222;
-            --branco: #fff;
+
+            --branco: #ffffff;
+
         }
 
+
         * {
+
             box-sizing: border-box;
+
         }
+
 
         html,
         body {
+
             margin: 0;
+
             min-height: 100%;
+
         }
+
 
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: var(--cinza-claro);
-            color: var(--texto);
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                var(--cinza-claro);
+
+            color:
+                var(--texto);
+
         }
 
-        /* Cabeçalho */
+
+        /* =================================================
+           CABEÇALHO
+           ================================================= */
 
         header {
-            background: var(--branco);
-            color: var(--azul-escuro);
 
-            padding: 16px 24px;
+            background:
+                var(--branco);
 
-            border-bottom: 4px solid var(--azul-escuro);
+            color:
+                var(--azul-escuro);
 
-            box-shadow: 0 2px 8px rgba(0,0,0,.10);
+            padding:
+                16px 24px;
+
+            border-bottom:
+                4px solid var(--azul-escuro);
+
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.10);
+
         }
 
+
         header h1 {
+
             margin: 0;
 
             font-size: 24px;
 
             line-height: 1.2;
+
         }
 
+
         header p {
-            margin: 6px 0 0;
+
+            margin:
+                6px 0 0;
 
             font-size: 14px;
 
-            color: var(--azul-texto);
+            color:
+                var(--azul-texto);
+
         }
 
-        /* Layout principal */
+
+        /* =================================================
+           LAYOUT PRINCIPAL
+           ================================================= */
 
         #layout {
 
@@ -86,141 +141,267 @@
             width: 100%;
 
             padding: 16px;
+
         }
 
-        /* Mapa */
+
+        /* =================================================
+           MAPA
+           ================================================= */
 
         #mapa-container {
 
-            background: var(--branco);
+            background:
+                var(--branco);
 
-            border: 1px solid var(--cinza-medio);
+            border:
+                1px solid var(--cinza-medio);
 
-            box-shadow: 0 2px 8px rgba(0,0,0,.12);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.12);
 
-            min-height: 650px;
+            min-height:
+                650px;
 
-            overflow: hidden;
+            overflow:
+                hidden;
+
         }
+
 
         #mapa {
 
-            width: 100%;
+            width:
+                100%;
 
-            height: 650px;
+            height:
+                650px;
+
         }
 
-        /* Painel lateral */
+
+        /* =================================================
+           PAINEL LATERAL
+           ================================================= */
 
         aside {
 
-            display: flex;
+            display:
+                flex;
 
-            flex-direction: column;
+            flex-direction:
+                column;
 
-            gap: 12px;
+            gap:
+                12px;
+
         }
+
 
         .card {
 
-            background: var(--branco);
+            background:
+                var(--branco);
 
-            border: 1px solid var(--cinza-medio);
+            border:
+                1px solid var(--cinza-medio);
 
-            box-shadow: 0 2px 8px rgba(0,0,0,.10);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.10);
 
-            padding: 14px;
+            padding:
+                14px;
+
         }
+
 
         .card h2 {
 
-            margin: 0 0 10px;
+            margin:
+                0 0 10px;
 
-            padding-bottom: 7px;
+            padding-bottom:
+                7px;
 
-            border-bottom: 1px solid var(--cinza-medio);
+            border-bottom:
+                1px solid var(--cinza-medio);
 
-            color: var(--azul-escuro);
+            color:
+                var(--azul-escuro);
 
-            font-size: 16px;
+            font-size:
+                16px;
+
         }
+
 
         .card p {
 
-            font-size: 13px;
+            font-size:
+                13px;
 
-            line-height: 1.5;
+            line-height:
+                1.5;
+
         }
 
-        /* Informações do poço */
+
+        /* =================================================
+           INFORMAÇÕES DO POÇO
+           ================================================= */
 
         #informacoes-poco {
 
-            font-size: 13px;
+            font-size:
+                13px;
 
-            line-height: 1.5;
+            line-height:
+                1.5;
+
         }
+
+
+        .informacao {
+
+            margin-bottom:
+                7px;
+
+        }
+
+
+        .informacao strong {
+
+            color:
+                var(--azul-escuro);
+
+        }
+
+
+        /* =================================================
+           BOTÃO DO PERFIL
+           ================================================= */
 
         .botao-perfil {
 
-            display: inline-block;
+            display:
+                inline-block;
 
-            margin-top: 10px;
+            margin-top:
+                10px;
 
-            padding: 8px 12px;
+            padding:
+                8px 12px;
 
-            background: var(--azul-escuro);
+            background:
+                var(--azul-escuro);
 
-            color: white;
+            color:
+                white;
 
-            text-decoration: none;
+            text-decoration:
+                none;
 
-            border-radius: 4px;
+            border-radius:
+                4px;
 
-            font-size: 13px;
+            font-size:
+                13px;
+
         }
+
 
         .botao-perfil:hover {
 
-            opacity: 0.85;
+            opacity:
+                0.85;
+
         }
 
-        /* Rodapé */
+
+        /* =================================================
+           MARCADOR DOS POÇOS
+           ================================================= */
+
+        .marcador-poco {
+
+            background:
+                #d62828;
+
+            border:
+                2px solid white;
+
+            border-radius:
+                50%;
+
+            width:
+                14px;
+
+            height:
+                14px;
+
+            box-shadow:
+                0 1px 4px rgba(0, 0, 0, 0.5);
+
+        }
+
+
+        /* =================================================
+           RODAPÉ
+           ================================================= */
 
         footer {
 
-            width: 100%;
+            width:
+                100%;
 
-            padding: 12px 18px;
+            padding:
+                12px 18px;
 
-            background: var(--branco);
+            background:
+                var(--branco);
 
-            border-top: 1px solid var(--cinza-medio);
+            border-top:
+                1px solid var(--cinza-medio);
 
-            color: #444;
+            color:
+                #444;
 
-            font-size: 12px;
+            font-size:
+                12px;
 
-            line-height: 1.4;
+            line-height:
+                1.4;
+
         }
 
-        /* Responsividade */
+
+        /* =================================================
+           RESPONSIVIDADE
+           ================================================= */
 
         @media (max-width: 900px) {
 
             #layout {
 
-                grid-template-columns: 1fr;
+                grid-template-columns:
+                    1fr;
+
             }
+
 
             #mapa-container {
 
-                min-height: 550px;
+                min-height:
+                    550px;
+
             }
+
 
             #mapa {
 
-                height: 550px;
+                height:
+                    550px;
+
             }
 
         }
@@ -232,6 +413,10 @@
 
 <body>
 
+
+<!-- =====================================================
+     CABEÇALHO
+     ===================================================== -->
 
 <header>
 
@@ -246,10 +431,16 @@
 </header>
 
 
+<!-- =====================================================
+     ÁREA PRINCIPAL
+     ===================================================== -->
+
 <main id="layout">
 
 
-    <!-- MAPA -->
+    <!-- =================================================
+         MAPA
+         ================================================= -->
 
     <section id="mapa-container">
 
@@ -258,10 +449,14 @@
     </section>
 
 
-    <!-- PAINEL LATERAL -->
+    <!-- =================================================
+         PAINEL LATERAL
+         ================================================= -->
 
     <aside>
 
+
+        <!-- Informações -->
 
         <div class="card">
 
@@ -270,13 +465,17 @@
             </h2>
 
             <p>
+
                 Selecione um poço no mapa para visualizar
                 suas informações e acessar o respectivo
                 perfil composto.
+
             </p>
 
         </div>
 
+
+        <!-- Poço selecionado -->
 
         <div class="card">
 
@@ -295,6 +494,8 @@
         </div>
 
 
+        <!-- Dados -->
+
         <div class="card">
 
             <h2>
@@ -302,9 +503,11 @@
             </h2>
 
             <p>
-                Os dados dos poços e demais informações
-                geoespaciais serão incorporados ao
-                visualizador progressivamente.
+
+                <strong id="quantidade-pocos">
+                    Carregando poços...
+                </strong>
+
             </p>
 
         </div>
@@ -316,6 +519,10 @@
 </main>
 
 
+<!-- =====================================================
+     RODAPÉ
+     ===================================================== -->
+
 <footer>
 
     Visualizador de Poços — Projeto em desenvolvimento.
@@ -323,48 +530,465 @@
 </footer>
 
 
-<!-- Leaflet -->
+
+<!-- =====================================================
+     LEAFLET
+     ===================================================== -->
 
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
 
+
+<!-- =====================================================
+     JAVASCRIPT DO VISUALIZADOR
+     ===================================================== -->
+
 <script>
 
-    /*
-     * Inicialização do mapa
-     */
 
-    const mapa = L.map('mapa').setView(
-        [0, -50],
-        5
+    /* =====================================================
+       1. CRIAÇÃO DO MAPA
+       ===================================================== */
+
+
+    const mapa = L.map(
+        'mapa'
     );
 
 
-    /*
-     * Mapa-base temporário
-     *
-     * Depois vamos substituir/adicionar
-     * o seu próprio raster.
-     */
+    /* =====================================================
+       2. MAPA-BASE TEMPORÁRIO
+       ===================================================== */
+
 
     L.tileLayer(
+
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
         {
+
             attribution:
-                '&copy; OpenStreetMap contributors'
+                '&copy; OpenStreetMap contributors',
+
+            maxZoom:
+                19
+
         }
+
     ).addTo(mapa);
 
 
-    /*
-     * Mensagem inicial
-     */
 
-    console.log(
-        'Visualizador de Poços iniciado.'
+    /* =====================================================
+       3. ÍCONE DOS POÇOS
+       ===================================================== */
+
+
+    const iconePoco = L.divIcon({
+
+        className:
+            'marcador-poco',
+
+        iconSize:
+            [14, 14],
+
+        iconAnchor:
+            [7, 7],
+
+        popupAnchor:
+            [0, -7]
+
+    });
+
+
+
+    /* =====================================================
+       4. FUNÇÃO PARA MOSTRAR AS INFORMAÇÕES DO POÇO
+       ===================================================== */
+
+
+    function mostrarPoco(
+        propriedades
+    ) {
+
+
+        const painel =
+            document.getElementById(
+                'informacoes-poco'
+            );
+
+
+        const nome =
+            propriedades.cmmnWllNm
+            || propriedades.wellid
+            || 'Poço sem identificação';
+
+
+        const wellid =
+            propriedades.wellid
+            || 'Não informado';
+
+
+        const uwi =
+            propriedades.uwi
+            || 'Não informado';
+
+
+        const localizacao =
+            propriedades.wllLocId
+            || 'Não informado';
+
+
+        const latitude =
+            propriedades.latitude
+            || 'Não informado';
+
+
+        const longitude =
+            propriedades.longitude
+            || 'Não informado';
+
+
+
+        painel.innerHTML = `
+
+            <div class="informacao">
+
+                <strong>Poço:</strong><br>
+
+                ${nome}
+
+            </div>
+
+
+            <div class="informacao">
+
+                <strong>Well ID:</strong><br>
+
+                ${wellid}
+
+            </div>
+
+
+            <div class="informacao">
+
+                <strong>UWI:</strong><br>
+
+                ${uwi}
+
+            </div>
+
+
+            <div class="informacao">
+
+                <strong>Localização:</strong><br>
+
+                ${localizacao}
+
+            </div>
+
+
+            <div class="informacao">
+
+                <strong>Latitude:</strong><br>
+
+                ${latitude}
+
+            </div>
+
+
+            <div class="informacao">
+
+                <strong>Longitude:</strong><br>
+
+                ${longitude}
+
+            </div>
+
+
+            <a
+                class="botao-perfil"
+                href="#"
+                onclick="alert('O acesso ao perfil composto será configurado na próxima etapa.'); return false;"
+            >
+
+                Ver perfil composto
+
+            </a>
+
+        `;
+
+    }
+
+
+
+    /* =====================================================
+       5. CARREGAMENTO DO GEOJSON
+       ===================================================== */
+
+
+    fetch(
+        'dados/pocos.geojson'
+    )
+
+
+    .then(
+
+        function(resposta) {
+
+            if (!resposta.ok) {
+
+                throw new Error(
+                    'Não foi possível carregar o arquivo pocos.geojson.'
+                );
+
+            }
+
+            return resposta.json();
+
+        }
+
+    )
+
+
+    .then(
+
+        function(dados) {
+
+
+            console.log(
+                'GeoJSON carregado:',
+                dados
+            );
+
+
+            /* ---------------------------------------------
+               Quantidade de poços
+               --------------------------------------------- */
+
+
+            const quantidade =
+                dados.features.length;
+
+
+            document.getElementById(
+                'quantidade-pocos'
+            ).textContent =
+
+                `${quantidade} poços carregados`;
+
+
+
+            /* ---------------------------------------------
+               Grupo que reunirá todos os poços
+               --------------------------------------------- */
+
+
+            const grupoPocos =
+                L.featureGroup();
+
+
+
+            /* ---------------------------------------------
+               Adiciona cada poço ao mapa
+               --------------------------------------------- */
+
+
+            dados.features.forEach(
+
+                function(feature) {
+
+
+                    const propriedades =
+                        feature.properties;
+
+
+                    const coordenadas =
+                        feature.geometry.coordinates;
+
+
+                    const longitude =
+                        coordenadas[0];
+
+
+                    const latitude =
+                        coordenadas[1];
+
+
+
+                    /* -------------------------------------
+                       Criação do marcador
+                       ------------------------------------- */
+
+
+                    const marcador =
+                        L.marker(
+
+                            [
+                                latitude,
+                                longitude
+                            ],
+
+                            {
+                                icon:
+                                    iconePoco
+                            }
+
+                        );
+
+
+
+                    /* -------------------------------------
+                       Clique no poço
+                       ------------------------------------- */
+
+
+                    marcador.on(
+
+                        'click',
+
+                        function() {
+
+
+                            mostrarPoco(
+                                propriedades
+                            );
+
+
+                            marcador.bindPopup(
+
+                                `
+
+                                <strong>
+                                    ${
+                                        propriedades.cmmnWllNm
+                                        ||
+                                        propriedades.wellid
+                                        ||
+                                        'Poço'
+                                    }
+                                </strong>
+
+                                `
+
+                            ).openPopup();
+
+
+                        }
+
+                    );
+
+
+
+                    /* -------------------------------------
+                       Adiciona ao grupo
+                       ------------------------------------- */
+
+
+                    marcador.addTo(
+                        grupoPocos
+                    );
+
+
+                }
+
+            );
+
+
+
+            /* ---------------------------------------------
+               Adiciona o grupo ao mapa
+               --------------------------------------------- */
+
+
+            grupoPocos.addTo(
+                mapa
+            );
+
+
+
+            /* ---------------------------------------------
+               Enquadra todos os poços
+               --------------------------------------------- */
+
+
+            if (
+                grupoPocos.getLayers().length > 0
+            ) {
+
+                mapa.fitBounds(
+
+                    grupoPocos.getBounds(),
+
+                    {
+                        padding:
+                            [40, 40]
+                    }
+
+                );
+
+            }
+
+
+        }
+
+    )
+
+
+    /* =====================================================
+       6. TRATAMENTO DE ERRO
+       ===================================================== */
+
+
+    .catch(
+
+        function(erro) {
+
+
+            console.error(
+                erro
+            );
+
+
+            document.getElementById(
+                'quantidade-pocos'
+            ).textContent =
+
+                'Erro ao carregar os poços.';
+
+
+            document.getElementById(
+                'informacoes-poco'
+            ).innerHTML = `
+
+                <p>
+
+                    Não foi possível carregar
+                    os dados dos poços.
+
+                </p>
+
+                <p>
+
+                    Verifique se o arquivo
+
+                    <strong>
+                        dados/pocos.geojson
+                    </strong>
+
+                    está presente no repositório.
+
+                </p>
+
+            `;
+
+
+        }
+
     );
+
 
 </script>
 
