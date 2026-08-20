@@ -1,0 +1,57 @@
+cff-version: 1.2.0
+
+message: >-
+  Se você utilizar as superfícies, os modelos 3D ou as informações
+  disponibilizadas neste repositório, cite a dissertação indicada abaixo.
+
+title: "Superfícies 3D da Bacia de Santos"
+type: software
+
+authors:
+  - family-names: "Rocha"
+    given-names: "Danielle Simeão Silverio"
+
+doi: "10.5281/zenodo.20032936"
+
+repository-code: "https://github.com/DanielleSimeao/Superficies-3D"
+
+url: "https://daniellesimeao.github.io/Superficies-3D/"
+
+abstract: >-
+  Repositório destinado à disponibilização e à visualização interativa
+  de superfícies sísmicas interpretadas da Bacia de Santos. As superfícies
+  fazem parte dos resultados da dissertação de mestrado de Danielle Simeão
+  Silverio Rocha, desenvolvida no Programa de Pós-Graduação em Geociências
+  e Meio Ambiente da Universidade Estadual Paulista.
+
+keywords:
+  - "Bacia de Santos"
+  - "Lineamento Tietê"
+  - "superfícies sísmicas"
+  - "modelos 3D"
+  - "interpretação sísmica"
+  - "geologia estrutural"
+  - "métodos potenciais"
+
+license: "MIT"
+
+preferred-citation:
+  type: thesis
+
+  authors:
+    - family-names: "Rocha"
+      given-names: "Danielle Simeão Silverio"
+
+  title: >-
+    Influência do Lineamento Tietê na porção centro-norte da Bacia de Santos
+    interpretada a partir de dados sísmicos, sensoriamento remoto e métodos
+    potenciais
+
+  year: 2026
+
+  thesis-type: "Dissertação de mestrado"
+
+  institution:
+    name: "Universidade Estadual Paulista (UNESP)"
+
+  url: "https://repositorio.unesp.br/entities/publication/f17f938e-fbf4-417a-9e09-51d4106ee36e"
