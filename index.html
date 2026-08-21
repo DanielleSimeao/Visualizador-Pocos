@@ -1,996 +1,387 @@
-<!DOCTYPE html>
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
-
     <meta charset="utf-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Visualizador de Poços</title>
 
-
-    <!-- =====================================================
-         LEAFLET
-         ===================================================== -->
-
+    <!-- Leaflet -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-
-
-    <!-- =====================================================
-         ESTILO DA PÁGINA
-         ===================================================== -->
+    >
 
     <style>
-
         :root {
-
-            --azul-escuro: #1f3a5f;
-
-            --azul-texto: #43566f;
-
-            --cinza-claro: #f4f6f8;
-
-            --cinza-medio: #d9dee5;
-
-            --texto: #222;
-
+            --azul-escuro: #17324d;
+            --azul: #285879;
+            --azul-claro: #eaf3f8;
+            --amarelo: #ffd54a;
+            --cinza-fundo: #edf1f4;
+            --cinza-borda: #d6dde3;
+            --texto: #1e2933;
             --branco: #ffffff;
-
+            --vermelho: #b63d3d;
+            --verde: #36754a;
         }
-
 
         * {
-
             box-sizing: border-box;
-
         }
-
 
         html,
         body {
-
             margin: 0;
-
             min-height: 100%;
-
         }
-
 
         body {
-
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-
-            background:
-                var(--cinza-claro);
-
-            color:
-                var(--texto);
-
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--cinza-fundo);
+            color: var(--texto);
         }
-
-
-        /* =================================================
-           CABEÇALHO
-           ================================================= */
 
         header {
-
-            background:
-                var(--branco);
-
-            color:
-                var(--azul-escuro);
-
-            padding:
-                16px 24px;
-
-            border-bottom:
-                4px solid var(--azul-escuro);
-
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.10);
-
+            background: var(--branco);
+            border-bottom: 4px solid var(--azul-escuro);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+            padding: 14px 22px;
         }
-
 
         header h1 {
-
             margin: 0;
-
+            color: var(--azul-escuro);
             font-size: 24px;
-
-            line-height: 1.2;
-
         }
-
 
         header p {
-
-            margin:
-                6px 0 0;
-
-            font-size: 14px;
-
-            color:
-                var(--azul-texto);
-
+            margin: 5px 0 0;
+            color: #526779;
+            font-size: 13px;
         }
-
-
-        /* =================================================
-           LAYOUT PRINCIPAL
-           ================================================= */
 
         #layout {
-
             display: grid;
-
-            grid-template-columns:
-                minmax(0, 1fr)
-                minmax(280px, 340px);
-
-            gap: 16px;
-
-            width: 100%;
-
-            padding: 16px;
-
+            grid-template-columns: minmax(0, 1fr) 330px;
+            gap: 14px;
+            padding: 14px;
         }
-
-
-        /* =================================================
-           MAPA
-           ================================================= */
 
         #mapa-container {
-
-            background:
-                var(--branco);
-
-            border:
-                1px solid var(--cinza-medio);
-
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.12);
-
-            min-height:
-                650px;
-
-            overflow:
-                hidden;
-
+            position: relative;
+            min-height: 690px;
+            background: #b7cbd6;
+            border: 1px solid var(--cinza-borda);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
         }
-
 
         #mapa {
-
-            width:
-                100%;
-
-            height:
-                650px;
-
+            width: 100%;
+            height: 690px;
         }
 
-
-        /* =================================================
-           PAINEL LATERAL
-           ================================================= */
+        #status-mapa {
+            position: absolute;
+            z-index: 1000;
+            left: 50%;
+            top: 14px;
+            transform: translateX(-50%);
+            max-width: calc(100% - 40px);
+            padding: 8px 12px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.93);
+            color: var(--azul-escuro);
+            font-size: 12px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+            pointer-events: none;
+        }
 
         aside {
-
-            display:
-                flex;
-
-            flex-direction:
-                column;
-
-            gap:
-                12px;
-
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
         }
-
 
         .card {
-
-            background:
-                var(--branco);
-
-            border:
-                1px solid var(--cinza-medio);
-
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.10);
-
-            padding:
-                14px;
-
+            background: var(--branco);
+            border: 1px solid var(--cinza-borda);
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+            padding: 13px;
         }
-
 
         .card h2 {
-
-            margin:
-                0 0 10px;
-
-            padding-bottom:
-                7px;
-
-            border-bottom:
-                1px solid var(--cinza-medio);
-
-            color:
-                var(--azul-escuro);
-
-            font-size:
-                16px;
-
+            margin: 0 0 9px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid var(--cinza-borda);
+            color: var(--azul-escuro);
+            font-size: 16px;
         }
-
 
         .card p {
-
-            font-size:
-                13px;
-
-            line-height:
-                1.5;
-
+            margin: 7px 0;
+            font-size: 13px;
+            line-height: 1.45;
         }
 
-
-        /* =================================================
-           INFORMAÇÕES DO POÇO
-           ================================================= */
-
-        #informacoes-poco {
-
-            font-size:
-                13px;
-
-            line-height:
-                1.5;
-
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--azul-escuro);
+            font-size: 12px;
+            font-weight: 700;
         }
 
+        select {
+            width: 100%;
+            padding: 8px 9px;
+            border: 1px solid #bdc8d0;
+            border-radius: 4px;
+            background: white;
+            color: var(--texto);
+            font-size: 13px;
+        }
 
         .informacao {
-
-            margin-bottom:
-                7px;
-
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.35;
         }
-
 
         .informacao strong {
-
-            color:
-                var(--azul-escuro);
-
+            color: var(--azul-escuro);
         }
 
-
-        /* =================================================
-           BOTÃO DO PERFIL
-           ================================================= */
+        .coordenadas {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+        }
 
         .botao-perfil {
-
-            display:
-                inline-block;
-
-            margin-top:
-                10px;
-
-            padding:
-                8px 12px;
-
-            background:
-                var(--azul-escuro);
-
-            color:
-                white;
-
-            text-decoration:
-                none;
-
-            border-radius:
-                4px;
-
-            font-size:
-                13px;
-
+            display: inline-block;
+            margin-top: 7px;
+            padding: 9px 12px;
+            border-radius: 4px;
+            background: var(--azul-escuro);
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
         }
-
 
         .botao-perfil:hover {
-
-            opacity:
-                0.85;
-
+            background: var(--azul);
         }
 
-
-        /* =================================================
-           MARCADOR DOS POÇOS
-           ================================================= */
-
-        .marcador-poco {
-
-            background:
-                #d62828;
-
-            border:
-                2px solid white;
-
-            border-radius:
-                50%;
-
-            width:
-                14px;
-
-            height:
-                14px;
-
-            box-shadow:
-                0 1px 4px rgba(0, 0, 0, 0.5);
-
+        .badge {
+            display: inline-block;
+            padding: 4px 7px;
+            margin-top: 3px;
+            border-radius: 4px;
+            background: var(--azul-claro);
+            color: var(--azul-escuro);
+            font-size: 12px;
         }
 
+        .status-ok {
+            color: var(--verde);
+        }
 
-        /* =================================================
-           RODAPÉ
-           ================================================= */
+        .status-erro {
+            color: var(--vermelho);
+        }
+
+        .legenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 7px 0;
+            font-size: 12px;
+        }
+
+        .legenda-poco {
+            width: 13px;
+            height: 13px;
+            flex: 0 0 13px;
+            border-radius: 50%;
+            background: var(--amarelo);
+            border: 2px solid var(--azul-escuro);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+        }
 
         footer {
-
-            width:
-                100%;
-
-            padding:
-                12px 18px;
-
-            background:
-                var(--branco);
-
-            border-top:
-                1px solid var(--cinza-medio);
-
-            color:
-                #444;
-
-            font-size:
-                12px;
-
-            line-height:
-                1.4;
-
+            padding: 11px 18px;
+            border-top: 1px solid var(--cinza-borda);
+            background: var(--branco);
+            color: #53616b;
+            font-size: 11px;
+            line-height: 1.4;
         }
 
+        .leaflet-control-layers {
+            font-size: 12px;
+        }
 
-        /* =================================================
-           RESPONSIVIDADE
-           ================================================= */
+        .leaflet-popup-content {
+            margin: 10px 13px;
+            font-size: 12px;
+        }
 
         @media (max-width: 900px) {
-
             #layout {
-
-                grid-template-columns:
-                    1fr;
-
+                grid-template-columns: 1fr;
             }
 
-
-            #mapa-container {
-
-                min-height:
-                    550px;
-
-            }
-
-
+            #mapa-container,
             #mapa {
-
-                height:
-                    550px;
-
+                min-height: 560px;
+                height: 560px;
             }
-
         }
-
     </style>
-
 </head>
-
 
 <body>
 
-
-<!-- =====================================================
-     CABEÇALHO
-     ===================================================== -->
-
 <header>
-
-    <h1>
-        Visualizador de Poços
-    </h1>
-
+    <h1>Visualizador de Poços</h1>
     <p>
-        Visualização interativa de poços, perfis compostos e dados geoespaciais
+        Poços, perfis compostos e contexto geoespacial do Cone do Amazonas
     </p>
-
 </header>
-
-
-<!-- =====================================================
-     ÁREA PRINCIPAL
-     ===================================================== -->
 
 <main id="layout">
 
-
-    <!-- =================================================
-         MAPA
-         ================================================= -->
-
     <section id="mapa-container">
-
+        <div id="status-mapa">Carregando base cartográfica...</div>
         <div id="mapa"></div>
-
     </section>
-
-
-    <!-- =================================================
-         PAINEL LATERAL
-         ================================================= -->
 
     <aside>
 
-
-        <!-- Informações -->
-
         <div class="card">
+            <h2>Localizar poço</h2>
 
-            <h2>
-                Informações
-            </h2>
+            <label for="poco-select">Selecione um poço</label>
+
+            <select id="poco-select" disabled>
+                <option value="">Carregando poços...</option>
+            </select>
 
             <p>
-
-                Selecione um poço no mapa para visualizar
-                suas informações e acessar o respectivo
-                perfil composto.
-
+                Você também pode clicar diretamente em qualquer marcador no mapa.
             </p>
-
         </div>
 
-
-        <!-- Poço selecionado -->
-
         <div class="card">
-
-            <h2>
-                Poço selecionado
-            </h2>
+            <h2>Poço selecionado</h2>
 
             <div id="informacoes-poco">
-
-                <p>
-                    Nenhum poço selecionado.
-                </p>
-
+                <p>Nenhum poço selecionado.</p>
             </div>
-
         </div>
-
-
-        <!-- Dados -->
 
         <div class="card">
-
-            <h2>
-                Dados
-            </h2>
+            <h2>Camadas e dados</h2>
 
             <p>
-
-                <strong id="quantidade-pocos">
-                    Carregando poços...
-                </strong>
-
+                <strong id="quantidade-pocos">Carregando poços...</strong>
             </p>
 
-        </div>
+            <p id="status-base">
+                Base PMTiles: carregando...
+            </p>
 
+            <div class="legenda-item">
+                <span class="legenda-poco"></span>
+                <span>Poços</span>
+            </div>
+
+            <p>
+                Use o controle de camadas no mapa para alternar entre a base
+                Amazonas + GEBCO e a imagem de satélite.
+            </p>
+        </div>
 
     </aside>
 
-
 </main>
 
-
-<!-- =====================================================
-     RODAPÉ
-     ===================================================== -->
-
 <footer>
-
-    Visualizador de Poços — Projeto em desenvolvimento.
-
+    Base batimétrica: GEBCO 2026. A composição visual utilizada como fundo é
+    cartográfica/estilizada. Visualizador em desenvolvimento.
 </footer>
 
 
-
-<!-- =====================================================
-     LEAFLET
-     ===================================================== -->
-
+<!-- Leaflet -->
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
+<!-- PMTiles -->
+<script
+    src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js">
+</script>
 
-
-<!-- =====================================================
-     JAVASCRIPT DO VISUALIZADOR
-     ===================================================== -->
 
 <script>
+    /* =========================================================
+       CONFIGURAÇÃO
+       ========================================================= */
+
+    const CAMINHO_PMTILES = 'dados/base/amazonas.pmtiles';
+    const CAMINHO_POCOS = 'dados/pocos.geojson';
+    const PASTA_PERFIS = 'perfis';
+
+    /*
+     * Extensão de segurança usada enquanto o cabeçalho PMTiles
+     * ainda está sendo carregado.
+     */
+    const EXTENSAO_PADRAO = [
+        [-10, -65],
+        [10, -30]
+    ];
 
 
-    /* =====================================================
-       1. CRIAÇÃO DO MAPA
-       ===================================================== */
+    /* =========================================================
+       MAPA
+       ========================================================= */
 
-
-    const mapa = L.map(
-        'mapa'
-    );
-
-
-    /* =====================================================
-       2. MAPA-BASE TEMPORÁRIO
-       ===================================================== */
-
-
-    L.tileLayer(
-
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-
-        {
-
-            attribution:
-                '&copy; OpenStreetMap contributors',
-
-            maxZoom:
-                19
-
-        }
-
-    ).addTo(mapa);
-
-
-
-    /* =====================================================
-       3. ÍCONE DOS POÇOS
-       ===================================================== */
-
-
-    const iconePoco = L.divIcon({
-
-        className:
-            'marcador-poco',
-
-        iconSize:
-            [14, 14],
-
-        iconAnchor:
-            [7, 7],
-
-        popupAnchor:
-            [0, -7]
-
+    const mapa = L.map('mapa', {
+        zoomControl: true,
+        minZoom: 2,
+        maxZoom: 18
     });
 
-
-
-    /* =====================================================
-       4. FUNÇÃO PARA MOSTRAR AS INFORMAÇÕES DO POÇO
-       ===================================================== */
-
-
-    function mostrarPoco(
-        propriedades
-    ) {
-
-
-        const painel =
-            document.getElementById(
-                'informacoes-poco'
-            );
-
-
-        const nome =
-            propriedades.cmmnWllNm
-            || propriedades.wellid
-            || 'Poço sem identificação';
-
-
-        const wellid =
-            propriedades.wellid
-            || 'Não informado';
-
-
-        const uwi =
-            propriedades.uwi
-            || 'Não informado';
-
-
-        const localizacao =
-            propriedades.wllLocId
-            || 'Não informado';
-
-
-        const latitude =
-            propriedades.latitude
-            || 'Não informado';
-
-
-        const longitude =
-            propriedades.longitude
-            || 'Não informado';
-
-
-
-        painel.innerHTML = `
-
-            <div class="informacao">
-
-                <strong>Poço:</strong><br>
-
-                ${nome}
-
-            </div>
-
-
-            <div class="informacao">
-
-                <strong>Well ID:</strong><br>
-
-                ${wellid}
-
-            </div>
-
-
-            <div class="informacao">
-
-                <strong>UWI:</strong><br>
-
-                ${uwi}
-
-            </div>
-
-
-            <div class="informacao">
-
-                <strong>Localização:</strong><br>
-
-                ${localizacao}
-
-            </div>
-
-
-            <div class="informacao">
-
-                <strong>Latitude:</strong><br>
-
-                ${latitude}
-
-            </div>
-
-
-            <div class="informacao">
-
-                <strong>Longitude:</strong><br>
-
-                ${longitude}
-
-            </div>
-
-
-            <a
-                class="botao-perfil"
-                href="#"
-                onclick="alert('O acesso ao perfil composto será configurado na próxima etapa.'); return false;"
-            >
-
-                Ver perfil composto
-
-            </a>
-
-        `;
-
-    }
-
-
-
-    /* =====================================================
-       5. CARREGAMENTO DO GEOJSON
-       ===================================================== */
-
-
-    fetch(
-        'dados/pocos.geojson'
-    )
-
-
-    .then(
-
-        function(resposta) {
-
-            if (!resposta.ok) {
-
-                throw new Error(
-                    'Não foi possível carregar o arquivo pocos.geojson.'
-                );
-
-            }
-
-            return resposta.json();
-
+    mapa.fitBounds(EXTENSAO_PADRAO);
+
+
+    /* =========================================================
+       BASE SATÉLITE OPCIONAL
+       ========================================================= */
+
+    const baseSatelite = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+            maxZoom: 18,
+            attribution:
+                'Imagery © Esri, Maxar, Earthstar Geographics e colaboradores'
         }
-
-    )
-
-
-    .then(
-
-        function(dados) {
-
-
-            console.log(
-                'GeoJSON carregado:',
-                dados
-            );
-
-
-            /* ---------------------------------------------
-               Quantidade de poços
-               --------------------------------------------- */
-
-
-            const quantidade =
-                dados.features.length;
-
-
-            document.getElementById(
-                'quantidade-pocos'
-            ).textContent =
-
-                `${quantidade} poços carregados`;
-
-
-
-            /* ---------------------------------------------
-               Grupo que reunirá todos os poços
-               --------------------------------------------- */
-
-
-            const grupoPocos =
-                L.featureGroup();
-
-
-
-            /* ---------------------------------------------
-               Adiciona cada poço ao mapa
-               --------------------------------------------- */
-
-
-            dados.features.forEach(
-
-                function(feature) {
-
-
-                    const propriedades =
-                        feature.properties;
-
-
-                    const coordenadas =
-                        feature.geometry.coordinates;
-
-
-                    const longitude =
-                        coordenadas[0];
-
-
-                    const latitude =
-                        coordenadas[1];
-
-
-
-                    /* -------------------------------------
-                       Criação do marcador
-                       ------------------------------------- */
-
-
-                    const marcador =
-                        L.marker(
-
-                            [
-                                latitude,
-                                longitude
-                            ],
-
-                            {
-                                icon:
-                                    iconePoco
-                            }
-
-                        );
-
-
-
-                    /* -------------------------------------
-                       Clique no poço
-                       ------------------------------------- */
-
-
-                    marcador.on(
-
-                        'click',
-
-                        function() {
-
-
-                            mostrarPoco(
-                                propriedades
-                            );
-
-
-                            marcador.bindPopup(
-
-                                `
-
-                                <strong>
-                                    ${
-                                        propriedades.cmmnWllNm
-                                        ||
-                                        propriedades.wellid
-                                        ||
-                                        'Poço'
-                                    }
-                                </strong>
-
-                                `
-
-                            ).openPopup();
-
-
-                        }
-
-                    );
-
-
-
-                    /* -------------------------------------
-                       Adiciona ao grupo
-                       ------------------------------------- */
-
-
-                    marcador.addTo(
-                        grupoPocos
-                    );
-
-
-                }
-
-            );
-
-
-
-            /* ---------------------------------------------
-               Adiciona o grupo ao mapa
-               --------------------------------------------- */
-
-
-            grupoPocos.addTo(
-                mapa
-            );
-
-
-
-            /* ---------------------------------------------
-               Enquadra todos os poços
-               --------------------------------------------- */
-
-
-            if (
-                grupoPocos.getLayers().length > 0
-            ) {
-
-                mapa.fitBounds(
-
-                    grupoPocos.getBounds(),
-
-                    {
-                        padding:
-                            [40, 40]
-                    }
-
-                );
-
-            }
-
-
-        }
-
-    )
-
-
-    /* =====================================================
-       6. TRATAMENTO DE ERRO
-       ===================================================== */
-
-
-    .catch(
-
-        function(erro) {
-
-
-            console.error(
-                erro
-            );
-
-
-            document.getElementById(
-                'quantidade-pocos'
-            ).textContent =
-
-                'Erro ao carregar os poços.';
-
-
-            document.getElementById(
-                'informacoes-poco'
-            ).innerHTML = `
-
-                <p>
-
-                    Não foi possível carregar
-                    os dados dos poços.
-
-                </p>
-
-                <p>
-
-                    Verifique se o arquivo
-
-                    <strong>
-                        dados/pocos.geojson
-                    </strong>
-
-                    está presente no repositório.
-
-                </p>
-
-            `;
-
-
-        }
-
     );
 
 
-</script>
+    /* =========================================================
+       GRUPO DOS POÇOS
+       ========================================================= */
+
+    const grupoPocos = L.featureGroup();
+
+    /*
+     * Dicionário usado pelo seletor lateral
 
 
 </body>
