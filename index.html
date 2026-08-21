@@ -444,38 +444,54 @@
         </div>
 
         <div class="card">
-            <h2>Elementos cartográficos</h2>
+            <h2>Legenda</h2>
 
-            <p>
-                O mapa apresenta:
-            </p>
+            <div style="font-size:10px; line-height:1.55;">
 
-            <div class="legenda-item">
-                <span class="legenda-poco">
-                    <svg width="20" height="28" viewBox="0 0 28 40" aria-hidden="true">
-                        <path d="M14 1.5C7 1.5 1.5 7 1.5 14c0 10.2 12.5 24.2 12.5 24.2S26.5 24.2 26.5 14C26.5 7 21 1.5 14 1.5Z"
-                              fill="#ffd54a" stroke="#17324d" stroke-width="2"/>
-                        <path d="M14 9 L10 20 L12.8 20 L11.6 25 L16.4 25 L15.2 20 L18 20 Z"
-                              fill="#17324d"/>
-                        <line x1="14" y1="9" x2="14" y2="25" stroke="#17324d" stroke-width="1.5"/>
-                        <line x1="11.4" y1="14" x2="16.6" y2="14" stroke="#17324d" stroke-width="1.2"/>
-                        <line x1="12.2" y1="18" x2="15.8" y2="18" stroke="#17324d" stroke-width="1.1"/>
-                    </svg>
-                </span>
-                <span>Símbolo de poço</span>
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:16px; height:16px; border-radius:50%; background:#a9a9a9; border:2px solid #4b5563; display:inline-block;"></span>
+                    <span>Poço</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:16px; height:16px; border-radius:50%; background:#ffd54a; border:2px solid #17324d; display:inline-block;"></span>
+                    <span>Poço com perfil composto, quando ativado</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:16px; height:16px; border-radius:50%; background:#35a853; border:2px solid #0f5f2b; display:inline-block;"></span>
+                    <span>Poço de Cruz (2019), quando ativado</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:24px; height:10px; border:2px solid #d7191c; background:rgba(215,25,28,.10); display:inline-block;"></span>
+                    <span>Área de estudo</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:25px; border-top:2px dashed #00c8f0; display:inline-block;"></span>
+                    <span>Sísmica 2D pública — ANP (Em fase de solicitação)</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:25px; border-top:3px solid #d81b60; display:inline-block;"></span>
+                    <span>Sísmica 2D pública — ANP (Disponíveis)</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:25px; border-top:3px solid #f28e2b; display:inline-block;"></span>
+                    <span>Sísmica LEPLAC (Disponíveis)</span>
+                </div>
             </div>
 
-            <p>
-                <strong>Escala:</strong> no canto inferior direito do mapa.<br>
+            <p style="margin-bottom:0;">
+                <strong>Escala:</strong> canto inferior esquerdo.<br>
                 <strong>Norte:</strong> indicado pela seta "N".
             </p>
         </div>
-<div class="card">
-            <h2>Dados dos poços</h2>
 
-            <p id="status-pocos">
-                Poços: aguardando...
-            </p>
+        <div class="card">
+            <h2>Dados dos poços</h2>
 
             <p>
                 <strong>Área de navegação:</strong><br>
@@ -500,7 +516,14 @@ window.addEventListener("load", async function () {
 
     const CAMINHO_POCOS = "dados/pocos.geojson";
     const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
-    const CAMINHO_SISMICA_ANP = "dados/sismica2d_anp_web.geojson";
+    const CAMINHO_SISMICA_ANP_SOLICITACAO =
+        "dados/sismica2d_anp_web.geojson";
+
+    const CAMINHO_SISMICA_ANP_DISPONIVEIS =
+        "dados/sismica2d_anp_disponiveis.geojson";
+
+    const CAMINHO_SISMICA_LEPLAC_DISPONIVEIS =
+        "dados/sismica_leplac_disponiveis.geojson";
 
 
     /*
@@ -626,7 +649,9 @@ const mapa = L.map(
        ===================================================== */
 
     let camadaAreaEstudo = null;
-    let camadaSismicaANP = null;
+    let camadaSismicaANPSolicitacao = null;
+    let camadaSismicaANPDisponiveis = null;
+    let camadaSismicaLEPLACDisponiveis = null;
 
     try {
         const respostaArea = await fetch(CAMINHO_AREA_ESTUDO);
@@ -691,24 +716,26 @@ const mapa = L.map(
                     <label>
                         <input
                             type="checkbox"
-                            id="toggle-sismica-anp"
+                            id="toggle-sismica-anp-solicitacao"
                         >
-                        <span>Sísmica 2D pública — ANP</span>
+                        <span>Sísmica 2D pública — ANP (Em fase de solicitação)</span>
                     </label>
 
-                    <div
-                        class="cruz-count"
-                        id="sismica-anp-count"
-                    >
-                        carregando linhas sísmicas...
-                    </div>
+                    <label>
+                        <input
+                            type="checkbox"
+                            id="toggle-sismica-anp-disponiveis"
+                        >
+                        <span>Sísmica 2D pública — ANP (Disponíveis)</span>
+                    </label>
 
-                    <div
-                        class="cruz-count"
-                        id="cruz-2019-count"
-                    >
-                        verificando poços...
-                    </div>
+                    <label>
+                        <input
+                            type="checkbox"
+                            id="toggle-sismica-leplac"
+                        >
+                        <span>Sísmica LEPLAC (Disponíveis)</span>
+                    </label>
                 `;
 
                 L.DomEvent.disableClickPropagation(div);
@@ -752,27 +779,62 @@ const mapa = L.map(
                     }
                 );
 
-                const checkboxSismica =
-                    div.querySelector("#toggle-sismica-anp");
+                function alternarCamadaSismica(checkbox, camada) {
 
-                checkboxSismica.addEventListener(
+                    if (!camada) {
+                        return;
+                    }
+
+                    if (checkbox.checked) {
+                        camada.addTo(mapa);
+
+                        if (
+                            camadaAreaEstudo &&
+                            mapa.hasLayer(camadaAreaEstudo)
+                        ) {
+                            camadaAreaEstudo.bringToFront();
+                        }
+                    } else {
+                        mapa.removeLayer(camada);
+                    }
+                }
+
+                const checkboxSolicitacao =
+                    div.querySelector("#toggle-sismica-anp-solicitacao");
+
+                checkboxSolicitacao.addEventListener(
                     "change",
                     function () {
+                        alternarCamadaSismica(
+                            this,
+                            camadaSismicaANPSolicitacao
+                        );
+                    }
+                );
 
-                        if (!camadaSismicaANP) {
-                            return;
-                        }
+                const checkboxANPDisponiveis =
+                    div.querySelector("#toggle-sismica-anp-disponiveis");
 
-                        if (this.checked) {
-                            camadaSismicaANP.addTo(mapa);
+                checkboxANPDisponiveis.addEventListener(
+                    "change",
+                    function () {
+                        alternarCamadaSismica(
+                            this,
+                            camadaSismicaANPDisponiveis
+                        );
+                    }
+                );
 
-                            if (camadaAreaEstudo &&
-                                mapa.hasLayer(camadaAreaEstudo)) {
-                                camadaAreaEstudo.bringToFront();
-                            }
-                        } else {
-                            mapa.removeLayer(camadaSismicaANP);
-                        }
+                const checkboxLEPLAC =
+                    div.querySelector("#toggle-sismica-leplac");
+
+                checkboxLEPLAC.addEventListener(
+                    "change",
+                    function () {
+                        alternarCamadaSismica(
+                            this,
+                            camadaSismicaLEPLACDisponiveis
+                        );
                     }
                 );
 
@@ -819,7 +881,7 @@ const mapa = L.map(
     try {
 
         const respostaSismica =
-            await fetch(CAMINHO_SISMICA_ANP);
+            await fetch(CAMINHO_SISMICA_ANP_SOLICITACAO);
 
         if (!respostaSismica.ok) {
             throw new Error(
@@ -831,7 +893,7 @@ const mapa = L.map(
         const geojsonSismica =
             await respostaSismica.json();
 
-        camadaSismicaANP =
+        camadaSismicaANPSolicitacao =
             L.geoJSON(
                 geojsonSismica,
                 {
@@ -839,7 +901,8 @@ const mapa = L.map(
                         return {
                             color: "#00c8f0",
                             weight: 1.8,
-                            opacity: 0.9
+                            opacity: 0.9,
+                            dashArray: "7 5"
                         };
                     },
 
@@ -865,7 +928,7 @@ const mapa = L.map(
                             layer.bindPopup(`
                                 <div style="min-width:220px; font-size:11px; line-height:1.4;">
                                     <strong style="color:#17324d;">
-                                        Sísmica 2D pública — ANP
+                                        Sísmica 2D pública — ANP (Em fase de solicitação)
                                     </strong>
 
                                     <br><br>
@@ -908,17 +971,6 @@ const mapa = L.map(
                 }
             );
 
-        const contadorSismica =
-            document.getElementById(
-                "sismica-anp-count"
-            );
-
-        if (contadorSismica) {
-            contadorSismica.textContent =
-                geojsonSismica.features.length +
-                " linha(s) sísmica(s) disponível(is)";
-        }
-
     } catch (erro) {
 
         console.error(
@@ -926,19 +978,146 @@ const mapa = L.map(
             erro
         );
 
-        const contadorSismica =
+        const toggle =
             document.getElementById(
-                "sismica-anp-count"
+                "toggle-sismica-anp-solicitacao"
             );
 
-        if (contadorSismica) {
-            contadorSismica.textContent =
-                "dados sísmicos indisponíveis";
+        if (toggle) {
+            toggle.disabled = true;
         }
+    }
+
+
+
+    /* =====================================================
+       SÍSMICA 2D PÚBLICA — ANP (DISPONÍVEIS)
+       ===================================================== */
+
+    try {
+        const resposta =
+            await fetch(CAMINHO_SISMICA_ANP_DISPONIVEIS);
+
+        if (!resposta.ok) {
+            throw new Error("HTTP " + resposta.status);
+        }
+
+        const geojson =
+            await resposta.json();
+
+        camadaSismicaANPDisponiveis =
+            L.geoJSON(geojson, {
+                style: {
+                    color: "#d81b60",
+                    weight: 2.0,
+                    opacity: 0.92
+                },
+
+                onEachFeature: function (feature, layer) {
+                    const p = feature.properties || {};
+                    const nome =
+                        p.ssGmStNm ||
+                        p.ss2dUqLnId ||
+                        "Linha sísmica 2D";
+
+                    layer.bindTooltip(nome, {
+                        sticky: true,
+                        direction: "top"
+                    });
+
+                    layer.bindPopup(`
+                        <div style="min-width:210px; font-size:11px; line-height:1.4;">
+                            <strong style="color:#17324d;">
+                                Sísmica 2D pública — ANP (Disponíveis)
+                            </strong>
+                            <br><br>
+                            <strong>Linha:</strong><br>
+                            ${p.ssGmStNm ?? "Não informado"}
+                            <br><br>
+                            <strong>ID:</strong><br>
+                            ${p.ss2dUqLnId ?? "Não informado"}
+                            <br><br>
+                            <strong>Projeto:</strong><br>
+                            ${p.project ?? "Não informado"}
+                        </div>
+                    `);
+                }
+            });
+
+    } catch (erro) {
+        console.error("Erro ANP disponíveis:", erro);
 
         const toggle =
             document.getElementById(
-                "toggle-sismica-anp"
+                "toggle-sismica-anp-disponiveis"
+            );
+
+        if (toggle) {
+            toggle.disabled = true;
+        }
+    }
+
+
+    /* =====================================================
+       SÍSMICA LEPLAC (DISPONÍVEIS)
+       ===================================================== */
+
+    try {
+        const resposta =
+            await fetch(CAMINHO_SISMICA_LEPLAC_DISPONIVEIS);
+
+        if (!resposta.ok) {
+            throw new Error("HTTP " + resposta.status);
+        }
+
+        const geojson =
+            await resposta.json();
+
+        camadaSismicaLEPLACDisponiveis =
+            L.geoJSON(geojson, {
+                style: {
+                    color: "#f28e2b",
+                    weight: 2.0,
+                    opacity: 0.92
+                },
+
+                onEachFeature: function (feature, layer) {
+                    const p = feature.properties || {};
+                    const nome =
+                        p.ssGmStNm ||
+                        p.ss2dUqLnId ||
+                        "Linha sísmica LEPLAC";
+
+                    layer.bindTooltip(nome, {
+                        sticky: true,
+                        direction: "top"
+                    });
+
+                    layer.bindPopup(`
+                        <div style="min-width:210px; font-size:11px; line-height:1.4;">
+                            <strong style="color:#17324d;">
+                                Sísmica LEPLAC (Disponíveis)
+                            </strong>
+                            <br><br>
+                            <strong>Linha:</strong><br>
+                            ${p.ssGmStNm ?? "Não informado"}
+                            <br><br>
+                            <strong>ID:</strong><br>
+                            ${p.ss2dUqLnId ?? "Não informado"}
+                            <br><br>
+                            <strong>Projeto:</strong><br>
+                            ${p.project ?? "Não informado"}
+                        </div>
+                    `);
+                }
+            });
+
+    } catch (erro) {
+        console.error("Erro LEPLAC:", erro);
+
+        const toggle =
+            document.getElementById(
+                "toggle-sismica-leplac"
             );
 
         if (toggle) {
@@ -1287,19 +1466,34 @@ const mapa = L.map(
             marcador.fire("click");
         });
 
-        document.getElementById("status-pocos").innerHTML =
-            '<span class="ok">' + nomes.length + ' poços carregados.</span>';
+        const statusPocos =
+            document.getElementById("status-pocos");
+
+        if (statusPocos) {
+            statusPocos.innerHTML =
+                '<span class="ok">' +
+                nomes.length +
+                ' poços carregados.</span>';
+        }
 
         atualizarContagemCruz2019();
 
     } catch (erro) {
         console.error(erro);
 
-        document.getElementById("status-pocos").innerHTML =
-            '<span class="erro">Erro ao carregar ' + CAMINHO_POCOS + '.</span>';
+        const statusPocos =
+            document.getElementById("status-pocos");
+
+        if (statusPocos) {
+            statusPocos.innerHTML =
+                '<span class="erro">Erro ao carregar ' +
+                CAMINHO_POCOS +
+                '.</span>';
+        }
     }
 });
 </script>
 
 </body>
+</html>
 </html>
