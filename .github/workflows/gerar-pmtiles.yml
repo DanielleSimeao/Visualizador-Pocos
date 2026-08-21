@@ -68,7 +68,27 @@ jobs:
 
           echo "MBTiles com overviews:"
           ls -lh saida/amazonas.mbtiles
+      - name: Corrigir metadados do MBTiles
+        run: |
+          sudo apt-get install -y sqlite3
 
+          echo "Metadados antes:"
+          sqlite3 saida/amazonas.mbtiles \
+            "SELECT name, value FROM metadata ORDER BY name;"
+
+          sqlite3 saida/amazonas.mbtiles \
+            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('format', 'jpg');"
+
+          sqlite3 saida/amazonas.mbtiles \
+            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('type', 'baselayer');"
+
+          sqlite3 saida/amazonas.mbtiles \
+            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('name', 'Base Amazonas');"
+
+          echo "Metadados depois:"
+          sqlite3 saida/amazonas.mbtiles \
+            "SELECT name, value FROM metadata ORDER BY name;"
+            
       - name: Baixar PMTiles
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,16 +113,18 @@ jobs:
 
           echo "PMTiles instalado:"
           pmtiles version
-
+          
       - name: Converter MBTiles para PMTiles
         run: |
-          pmtiles convert             saida/amazonas.mbtiles             saida/amazonas.pmtiles
+          pmtiles convert \
+            saida/amazonas.mbtiles \
+            saida/amazonas.pmtiles \
+            --force
 
           test -f saida/amazonas.pmtiles
 
           echo "PMTiles gerado:"
           ls -lh saida/amazonas.pmtiles
-
       - name: Copiar previa
         run: |
           if [ -f entrada/PREVIA_base_com_batimetria.jpg ]; then
