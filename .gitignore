@@ -1,8 +1,0 @@
-# Arquivos temporários e resultados locais
-dados/temporario/
-saida/
-gebco.zip
-
-# Python
-__pycache__/
-*.pyc
