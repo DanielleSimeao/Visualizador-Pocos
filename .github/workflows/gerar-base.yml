@@ -7,6 +7,7 @@ permissions:
   contents: read
 
 jobs:
+
   gerar-base:
 
     runs-on: ubuntu-latest
@@ -15,9 +16,17 @@ jobs:
 
     steps:
 
+      # ------------------------------------------------------
+      # REPOSITÓRIO
+      # ------------------------------------------------------
+
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
+
+      # ------------------------------------------------------
+      # PYTHON
+      # ------------------------------------------------------
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -26,11 +35,27 @@ jobs:
           cache: "pip"
 
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias Python
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+
+      # ------------------------------------------------------
+      # GDAL
+      # ------------------------------------------------------
+
+      - name: Instalar GDAL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gdal-bin \
+            python3-gdal
+
+
+      # ------------------------------------------------------
+      # GEBCO
+      # ------------------------------------------------------
 
       - name: Criar pasta temporaria
         run: |
@@ -50,46 +75,125 @@ jobs:
         run: |
           unzip -q gebco.zip -d dados/temporario
 
-          echo "Arquivos encontrados:"
+          echo "Arquivos GEBCO encontrados:"
 
-          find dados/temporario -maxdepth 3 -type f -print
+          find dados/temporario \
+            -maxdepth 3 \
+            -type f \
+            -print
 
+
+      # ------------------------------------------------------
+      # GERAÇÃO DA BASE
+      # ------------------------------------------------------
 
       - name: Executar processamento
         run: |
           python scripts/gerar_base.py
 
-      - name: Instalar GDAL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdal-bin python3-gdal
 
-      - name: Gerar tiles XYZ
-        run: |
-          mkdir -p saida/tiles
+      # ------------------------------------------------------
+      # GEOTIFF → MBTILES
+      # ------------------------------------------------------
 
-          gdal2tiles.py \
-            -z 3-9 \
-            --xyz \
-            --webviewer=none \
+      - name: Gerar MBTiles
+        run: |
+
+          echo "Gerando MBTiles..."
+
+          gdal_translate \
             saida/base_aprovada_com_batimetria.tif \
-            saida/tiles
-            
+            saida/amazonas.mbtiles \
+            -of MBTILES \
+            -co TILE_FORMAT=JPEG \
+            -co QUALITY=82 \
+            -co TYPE=baselayer \
+            -co NAME="Base Amazonas" \
+            -co DESCRIPTION="Base regional do Amazonas com batimetria GEBCO 2026" \
+            -co ZOOM_LEVEL_STRATEGY=UPPER \
+            -co RESAMPLING=BILINEAR
+
+
+      # ------------------------------------------------------
+      # NÍVEIS DE ZOOM MENORES
+      # ------------------------------------------------------
+
+      - name: Gerar niveis inferiores de zoom
+        run: |
+
+          echo "Gerando overviews..."
+
+          gdaladdo \
+            -r average \
+            saida/amazonas.mbtiles \
+            2 4 8 16 32
+
+
+      # ------------------------------------------------------
+      # INSTALA PMTILES
+      # ------------------------------------------------------
+
+      - name: Instalar PMTiles
+        run: |
+
+          curl -L \
+            https://github.com/protomaps/go-pmtiles/releases/latest/download/go-pmtiles_1.28.0_Linux_x86_64.tar.gz \
+            -o pmtiles.tar.gz
+
+          tar -xzf pmtiles.tar.gz
+
+          chmod +x pmtiles
+
+          sudo mv pmtiles /usr/local/bin/pmtiles
+
+          pmtiles --help
+
+
+      # ------------------------------------------------------
+      # MBTILES → PMTILES
+      # ------------------------------------------------------
+
+      - name: Converter MBTiles para PMTiles
+        run: |
+
+          echo "Convertendo para PMTiles..."
+
+          pmtiles convert \
+            saida/amazonas.mbtiles \
+            saida/amazonas.pmtiles
+
+
+      # ------------------------------------------------------
+      # TAMANHOS
+      # ------------------------------------------------------
+
       - name: Mostrar resultados
         run: |
+
+          echo "Arquivos gerados:"
+
           ls -lh saida/
 
+          echo ""
+          echo "Tamanho do PMTiles:"
 
-      - name: Salvar resultados como artifact
+          du -h saida/amazonas.pmtiles
+
+
+      # ------------------------------------------------------
+      # ARTIFACT
+      # ------------------------------------------------------
+
+      - name: Salvar resultados
         uses: actions/upload-artifact@v4
 
         with:
-          name: base-amazonas-batimetria
+
+          name: base-amazonas-pmtiles
 
           path: |
             saida/PREVIA_base_com_batimetria.jpg
-            saida/base_aprovada_com_batimetria.tif
-            saida/tiles/
+            saida/amazonas.pmtiles
 
           retention-days: 30
 
