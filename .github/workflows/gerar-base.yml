@@ -59,7 +59,22 @@ jobs:
         run: |
           python scripts/gerar_base.py
 
+      - name: Instalar GDAL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin python3-gdal
 
+      - name: Gerar tiles XYZ
+        run: |
+          mkdir -p saida/tiles
+
+          gdal2tiles.py \
+            -z 3-9 \
+            --xyz \
+            --webviewer=none \
+            saida/base_aprovada_com_batimetria.tif \
+            saida/tiles
+            
       - name: Mostrar resultados
         run: |
           ls -lh saida/
@@ -74,6 +89,7 @@ jobs:
           path: |
             saida/PREVIA_base_com_batimetria.jpg
             saida/base_aprovada_com_batimetria.tif
+            saida/tiles/
 
           retention-days: 30
 
