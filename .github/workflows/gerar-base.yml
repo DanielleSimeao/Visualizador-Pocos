@@ -2,7 +2,7 @@ from pathlib import Path
 
 workflow = """name: Gerar base batimetrica
 
-on:
+"on":
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   gerar-base:
-    name: Gerar base e PMTiles
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -25,133 +24,77 @@ jobs:
           cache: "pip"
 
       - name: Instalar dependencias Python
-        shell: bash
         run: |
-          set -euo pipefail
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Instalar GDAL
-        shell: bash
         run: |
-          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y gdal-bin python3-gdal sqlite3
-          echo "Versao do GDAL:"
-          gdalinfo --version
+          sudo apt-get install -y gdal-bin python3-gdal
 
-      - name: Criar pastas de trabalho
-        shell: bash
+      - name: Criar pastas
         run: |
-          set -euo pipefail
           mkdir -p dados/temporario
           mkdir -p saida
 
-      - name: Baixar GEBCO da Release
-        shell: bash
+      - name: Baixar GEBCO
         run: |
-          set -euo pipefail
-          curl -fL \\
-            --retry 3 \\
-            --retry-delay 2 \\
-            -o gebco.zip \\
+          curl -fL --retry 3 \
+            -o gebco.zip \
             "https://github.com/DanielleSimeao/Visualizador-Pocos/releases/download/gebco/GEBCO_20_Aug_2026_8e1383804eb4.zip"
-          echo "GEBCO baixado:"
-          ls -lh gebco.zip
 
       - name: Descompactar GEBCO
-        shell: bash
         run: |
-          set -euo pipefail
           unzip -q gebco.zip -d dados/temporario
-          echo "Arquivos encontrados:"
-          find dados/temporario -maxdepth 4 -type f -print
+          find dados/temporario -type f -maxdepth 4 -print
 
-      - name: Executar processamento Python
-        shell: bash
+      - name: Gerar base
         run: |
-          set -euo pipefail
           python scripts/gerar_base.py
 
-      - name: Conferir GeoTIFF
-        shell: bash
+      - name: Conferir arquivos gerados
         run: |
-          set -euo pipefail
+          test -f saida/PREVIA_base_com_batimetria.jpg
           test -f saida/base_aprovada_com_batimetria.tif
-          echo "GeoTIFF gerado:"
-          ls -lh saida/base_aprovada_com_batimetria.tif
-          echo ""
-          echo "Informacoes do raster:"
-          gdalinfo saida/base_aprovada_com_batimetria.tif | head -n 40
+          ls -lh saida/
 
       - name: Gerar MBTiles
-        shell: bash
         run: |
-          set -euo pipefail
-          echo "Gerando MBTiles..."
-          gdal_translate \\
-            saida/base_aprovada_com_batimetria.tif \\
-            saida/amazonas.mbtiles \\
-            -of MBTILES \\
-            -co TILE_FORMAT=JPEG \\
+          gdal_translate \
+            saida/base_aprovada_com_batimetria.tif \
+            saida/amazonas.mbtiles \
+            -of MBTILES \
+            -co TILE_FORMAT=JPEG \
             -co QUALITY=82
-          echo ""
-          echo "MBTiles criado:"
-          ls -lh saida/amazonas.mbtiles
 
-      - name: Gerar niveis inferiores de zoom
-        shell: bash
+      - name: Gerar niveis de zoom
         run: |
-          set -euo pipefail
-          gdaladdo \\
-            -r average \\
-            saida/amazonas.mbtiles \\
+          gdaladdo \
+            -r average \
+            saida/amazonas.mbtiles \
             2 4 8 16 32 64
-          echo ""
-          echo "Metadados do MBTiles:"
-          sqlite3 saida/amazonas.mbtiles \\
-            "SELECT name, value FROM metadata ORDER BY name;"
 
-        - name: Instalar PMTiles
+      - name: Baixar PMTiles
         run: |
-          curl -fL \
+          curl -fL --retry 3 \
             "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz" \
             -o pmtiles.tar.gz
 
           tar -xzf pmtiles.tar.gz
-
           chmod +x pmtiles
-
           sudo mv pmtiles /usr/local/bin/pmtiles
 
-          pmtiles version
-      - name: Converter MBTiles para PMTiles
-        shell: bash
+      - name: Converter para PMTiles
         run: |
-          set -euo pipefail
-          echo "Convertendo MBTiles para PMTiles..."
-          pmtiles convert \\
-            saida/amazonas.mbtiles \\
+          pmtiles convert \
+            saida/amazonas.mbtiles \
             saida/amazonas.pmtiles
+
           test -f saida/amazonas.pmtiles
-          echo ""
-          echo "PMTiles criado:"
           ls -lh saida/amazonas.pmtiles
 
-      - name: Mostrar resultados
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Arquivos finais:"
-          ls -lh saida/
-          echo ""
-          echo "Tamanho do PMTiles:"
-          du -h saida/amazonas.pmtiles
-          echo ""
-          echo "Tamanho da previa:"
-          du -h saida/PREVIA_base_com_batimetria.jpg
-
-      - name: Salvar resultados como artifact
+      - name: Salvar resultados
         uses: actions/upload-artifact@v4
         with:
           name: base-amazonas-pmtiles
@@ -162,9 +105,8 @@ jobs:
           if-no-files-found: error
 """
 
-out = Path("/mnt/data/gerar-base.yml")
-out.write_text(workflow, encoding="utf-8")
+path = Path("/mnt/data/gerar-base-SIMPLIFICADO.yml")
+path.write_text(workflow, encoding="utf-8")
 
-print("Arquivo criado:", out)
-print("Tamanho:", out.stat().st_size, "bytes")
-
+print(f"Arquivo criado: {path}")
+print(f"{len(workflow.splitlines())} linhas")
