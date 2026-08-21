@@ -500,6 +500,7 @@ window.addEventListener("load", async function () {
 
     const CAMINHO_POCOS = "dados/pocos.geojson";
     const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
+    const CAMINHO_SISMICA_ANP = "dados/sismica2d_anp_web.geojson";
 
 
     /*
@@ -625,6 +626,7 @@ const mapa = L.map(
        ===================================================== */
 
     let camadaAreaEstudo = null;
+    let camadaSismicaANP = null;
 
     try {
         const respostaArea = await fetch(CAMINHO_AREA_ESTUDO);
@@ -686,6 +688,21 @@ const mapa = L.map(
                         <span>Poços — Cruz (2019)</span>
                     </label>
 
+                    <label>
+                        <input
+                            type="checkbox"
+                            id="toggle-sismica-anp"
+                        >
+                        <span>Sísmica 2D pública — ANP</span>
+                    </label>
+
+                    <div
+                        class="cruz-count"
+                        id="sismica-anp-count"
+                    >
+                        carregando linhas sísmicas...
+                    </div>
+
                     <div
                         class="cruz-count"
                         id="cruz-2019-count"
@@ -735,6 +752,30 @@ const mapa = L.map(
                     }
                 );
 
+                const checkboxSismica =
+                    div.querySelector("#toggle-sismica-anp");
+
+                checkboxSismica.addEventListener(
+                    "change",
+                    function () {
+
+                        if (!camadaSismicaANP) {
+                            return;
+                        }
+
+                        if (this.checked) {
+                            camadaSismicaANP.addTo(mapa);
+
+                            if (camadaAreaEstudo &&
+                                mapa.hasLayer(camadaAreaEstudo)) {
+                                camadaAreaEstudo.bringToFront();
+                            }
+                        } else {
+                            mapa.removeLayer(camadaSismicaANP);
+                        }
+                    }
+                );
+
                 const checkboxCruz =
                     div.querySelector("#toggle-cruz-2019");
 
@@ -767,6 +808,142 @@ const mapa = L.map(
         console.warn(
             "Controle da área ficará indisponível."
         );
+    }
+
+
+
+    /* =====================================================
+       SÍSMICA 2D PÚBLICA — ANP
+       ===================================================== */
+
+    try {
+
+        const respostaSismica =
+            await fetch(CAMINHO_SISMICA_ANP);
+
+        if (!respostaSismica.ok) {
+            throw new Error(
+                "HTTP " +
+                respostaSismica.status
+            );
+        }
+
+        const geojsonSismica =
+            await respostaSismica.json();
+
+        camadaSismicaANP =
+            L.geoJSON(
+                geojsonSismica,
+                {
+                    style: function () {
+                        return {
+                            color: "#00c8f0",
+                            weight: 1.8,
+                            opacity: 0.9
+                        };
+                    },
+
+                    onEachFeature:
+                        function (feature, layer) {
+
+                            const p =
+                                feature.properties || {};
+
+                            const projeto =
+                                p.PROJETO ||
+                                p.LEVANT ||
+                                "Linha sísmica 2D";
+
+                            layer.bindTooltip(
+                                projeto,
+                                {
+                                    sticky: true,
+                                    direction: "top"
+                                }
+                            );
+
+                            layer.bindPopup(`
+                                <div style="min-width:220px; font-size:11px; line-height:1.4;">
+                                    <strong style="color:#17324d;">
+                                        Sísmica 2D pública — ANP
+                                    </strong>
+
+                                    <br><br>
+
+                                    <strong>Projeto:</strong><br>
+                                    ${p.PROJETO ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Levantamento:</strong><br>
+                                    ${p.LEVANT ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Código:</strong><br>
+                                    ${p.COD ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Tecnologia:</strong><br>
+                                    ${p.TECNOLOGIA ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Operadora:</strong><br>
+                                    ${p.OPERADORA ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Início:</strong><br>
+                                    ${p.INICIO ?? "Não informado"}
+
+                                    <br><br>
+
+                                    <strong>Término:</strong><br>
+                                    ${p.TERM_REAL ?? "Não informado"}
+                                </div>
+                            `);
+                        }
+                }
+            );
+
+        const contadorSismica =
+            document.getElementById(
+                "sismica-anp-count"
+            );
+
+        if (contadorSismica) {
+            contadorSismica.textContent =
+                geojsonSismica.features.length +
+                " linha(s) sísmica(s) disponível(is)";
+        }
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao carregar sísmica ANP:",
+            erro
+        );
+
+        const contadorSismica =
+            document.getElementById(
+                "sismica-anp-count"
+            );
+
+        if (contadorSismica) {
+            contadorSismica.textContent =
+                "dados sísmicos indisponíveis";
+        }
+
+        const toggle =
+            document.getElementById(
+                "toggle-sismica-anp"
+            );
+
+        if (toggle) {
+            toggle.disabled = true;
+        }
     }
 
 
