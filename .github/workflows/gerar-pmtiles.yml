@@ -48,18 +48,18 @@ jobs:
 
           test -f entrada/base_aprovada_com_batimetria.tif
 
-      - name: Instalar GDAL
+      - name: Instalar GDAL e SQLite
         run: |
           sudo apt-get update
-          sudo apt-get install -y gdal-bin
-
+          sudo apt-get install -y gdal-bin sqlite3
           gdalinfo --version
+          sqlite3 --version
 
       - name: Gerar MBTiles
         run: |
           gdal_translate             entrada/base_aprovada_com_batimetria.tif             saida/amazonas.mbtiles             -of MBTILES             -co TILE_FORMAT=JPEG             -co QUALITY=82
 
-          echo "MBTiles gerado:"
+          echo "MBTiles inicial:"
           ls -lh saida/amazonas.mbtiles
 
       - name: Gerar niveis de zoom
@@ -68,27 +68,56 @@ jobs:
 
           echo "MBTiles com overviews:"
           ls -lh saida/amazonas.mbtiles
-      - name: Corrigir metadados do MBTiles
+
+      - name: Conferir tiles e corrigir metadados
         run: |
-          sudo apt-get install -y sqlite3
+          echo "Quantidade total de tiles:"
+          TILE_COUNT=$(sqlite3 saida/amazonas.mbtiles             "SELECT COUNT(*) FROM tiles;")
+          echo "$TILE_COUNT"
 
-          echo "Metadados antes:"
-          sqlite3 saida/amazonas.mbtiles \
-            "SELECT name, value FROM metadata ORDER BY name;"
+          if [ "$TILE_COUNT" -lt 2 ]; then
+            echo "O MBTiles nao contem tiles suficientes."
+            exit 1
+          fi
 
-          sqlite3 saida/amazonas.mbtiles \
-            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('format', 'jpg');"
+          MINZOOM=$(sqlite3 saida/amazonas.mbtiles             "SELECT MIN(zoom_level) FROM tiles;")
+          MAXZOOM=$(sqlite3 saida/amazonas.mbtiles             "SELECT MAX(zoom_level) FROM tiles;")
 
-          sqlite3 saida/amazonas.mbtiles \
-            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('type', 'baselayer');"
+          echo "Zoom minimo encontrado: $MINZOOM"
+          echo "Zoom maximo encontrado: $MAXZOOM"
 
-          sqlite3 saida/amazonas.mbtiles \
-            "INSERT OR REPLACE INTO metadata (name, value) VALUES ('name', 'Base Amazonas');"
+          echo ""
+          echo "Metadados antes da correcao:"
+          sqlite3 saida/amazonas.mbtiles             "SELECT name, value FROM metadata ORDER BY name;"
 
-          echo "Metadados depois:"
-          sqlite3 saida/amazonas.mbtiles \
-            "SELECT name, value FROM metadata ORDER BY name;"
-            
+          sqlite3 saida/amazonas.mbtiles <<SQL
+          DELETE FROM metadata
+          WHERE name IN ('format', 'type', 'name', 'minzoom', 'maxzoom');
+
+          INSERT INTO metadata (name, value)
+          VALUES ('format', 'jpg');
+
+          INSERT INTO metadata (name, value)
+          VALUES ('type', 'baselayer');
+
+          INSERT INTO metadata (name, value)
+          VALUES ('name', 'Base Amazonas');
+
+          INSERT INTO metadata (name, value)
+          VALUES ('minzoom', '$MINZOOM');
+
+          INSERT INTO metadata (name, value)
+          VALUES ('maxzoom', '$MAXZOOM');
+          SQL
+
+          echo ""
+          echo "Metadados depois da correcao:"
+          sqlite3 saida/amazonas.mbtiles             "SELECT name, value FROM metadata ORDER BY name;"
+
+          echo ""
+          echo "Tiles por nivel de zoom:"
+          sqlite3 saida/amazonas.mbtiles             "SELECT zoom_level, COUNT(*) FROM tiles GROUP BY zoom_level ORDER BY zoom_level;"
+
       - name: Baixar PMTiles
         env:
           GH_TOKEN: ${{ github.token }}
@@ -111,20 +140,35 @@ jobs:
 
           sudo install             -m 0755             "$PMTILES_BIN"             /usr/local/bin/pmtiles
 
-          echo "PMTiles instalado:"
           pmtiles version
-          
+
       - name: Converter MBTiles para PMTiles
         run: |
-          pmtiles convert \
-            saida/amazonas.mbtiles \
-            saida/amazonas.pmtiles \
-            --force
+          pmtiles convert             saida/amazonas.mbtiles             saida/amazonas.pmtiles
 
           test -f saida/amazonas.pmtiles
 
           echo "PMTiles gerado:"
           ls -lh saida/amazonas.pmtiles
+
+          PMTILES_SIZE=$(stat -c%s saida/amazonas.pmtiles)
+
+          echo "Tamanho em bytes: $PMTILES_SIZE"
+
+          if [ "$PMTILES_SIZE" -lt 100000 ]; then
+            echo "ERRO: o PMTiles ficou pequeno demais e provavelmente esta invalido."
+            exit 1
+          fi
+
+      - name: Verificar PMTiles
+        run: |
+          echo "Resumo do PMTiles:"
+          pmtiles show saida/amazonas.pmtiles
+
+          echo ""
+          echo "Verificando estrutura:"
+          pmtiles verify saida/amazonas.pmtiles
+
       - name: Copiar previa
         run: |
           if [ -f entrada/PREVIA_base_com_batimetria.jpg ]; then
