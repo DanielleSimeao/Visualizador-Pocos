@@ -408,6 +408,20 @@ window.addEventListener("load", async function () {
 
     const CAMINHO_POCOS = "dados/pocos.geojson";
 
+    /*
+     * Perfis compostos atualmente disponíveis no repositório.
+     * A chave deve ser exatamente o nome do poço no GeoJSON.
+     */
+    const PERFIS_DISPONIVEIS = {
+        "1-APS-30-AP": "perfis/1-APS-30-AP_perfil_composto.pdf",
+        "1-APS-32-AP": "perfis/1-APS-32-AP_perfil_composto.pdf",
+        "1-APS-35-AP": "perfis/1-APS-35-AP_perfil_composto.pdf",
+        "1-APS-38-AP": "perfis/1-APS-38-AP_perfil_composto.pdf",
+        "1-APS-41-AP": "perfis/1-APS-41-AP_perfil_composto.pdf",
+        "1-APS-47-AP": "perfis/1APS_0047_AP_pasta_poco_pub.pdf"
+    };
+
+
     const mapa = L.map(
         "mapa",
         {
@@ -548,6 +562,25 @@ window.addEventListener("load", async function () {
 
             marcador.on("click", function () {
 
+                const arquivoPerfil = PERFIS_DISPONIVEIS[nome];
+
+                const blocoPerfil = arquivoPerfil
+                    ? `
+                        <a
+                            class="botao"
+                            href="${arquivoPerfil}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Abrir perfil composto
+                        </a>
+                      `
+                    : `
+                        <div class="nota">
+                            Perfil composto ainda não disponível para este poço.
+                        </div>
+                      `;
+
                 document.getElementById("painel-poco").innerHTML = `
                     <div class="info">
                         <strong>Poço</strong><br>
@@ -574,14 +607,7 @@ window.addEventListener("load", async function () {
                         ${longitude.toFixed(6)}
                     </div>
 
-                    <a
-                        class="botao"
-                        href="perfis/${encodeURIComponent(nome)}.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Abrir perfil composto
-                    </a>
+                    ${blocoPerfil}
                 `;
             });
 
