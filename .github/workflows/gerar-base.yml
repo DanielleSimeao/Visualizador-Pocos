@@ -1,112 +1,15 @@
-from pathlib import Path
+name: Gerar base batimetrica
 
-workflow = """name: Gerar base batimetrica
-
-"on":
+on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  gerar-base:
+  teste:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Instalar dependencias Python
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Instalar GDAL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gdal-bin python3-gdal
-
-      - name: Criar pastas
-        run: |
-          mkdir -p dados/temporario
-          mkdir -p saida
-
-      - name: Baixar GEBCO
-        run: |
-          curl -fL --retry 3 \
-            -o gebco.zip \
-            "https://github.com/DanielleSimeao/Visualizador-Pocos/releases/download/gebco/GEBCO_20_Aug_2026_8e1383804eb4.zip"
-
-      - name: Descompactar GEBCO
-        run: |
-          unzip -q gebco.zip -d dados/temporario
-          find dados/temporario -type f -maxdepth 4 -print
-
-      - name: Gerar base
-        run: |
-          python scripts/gerar_base.py
-
-      - name: Conferir arquivos gerados
-        run: |
-          test -f saida/PREVIA_base_com_batimetria.jpg
-          test -f saida/base_aprovada_com_batimetria.tif
-          ls -lh saida/
-
-      - name: Gerar MBTiles
-        run: |
-          gdal_translate \
-            saida/base_aprovada_com_batimetria.tif \
-            saida/amazonas.mbtiles \
-            -of MBTILES \
-            -co TILE_FORMAT=JPEG \
-            -co QUALITY=82
-
-      - name: Gerar niveis de zoom
-        run: |
-          gdaladdo \
-            -r average \
-            saida/amazonas.mbtiles \
-            2 4 8 16 32 64
-
-      - name: Baixar PMTiles
-        run: |
-          curl -fL --retry 3 \
-            "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz" \
-            -o pmtiles.tar.gz
-
-          tar -xzf pmtiles.tar.gz
-          chmod +x pmtiles
-          sudo mv pmtiles /usr/local/bin/pmtiles
-
-      - name: Converter para PMTiles
-        run: |
-          pmtiles convert \
-            saida/amazonas.mbtiles \
-            saida/amazonas.pmtiles
-
-          test -f saida/amazonas.pmtiles
-          ls -lh saida/amazonas.pmtiles
-
-      - name: Salvar resultados
-        uses: actions/upload-artifact@v4
-        with:
-          name: base-amazonas-pmtiles
-          path: |
-            saida/PREVIA_base_com_batimetria.jpg
-            saida/amazonas.pmtiles
-          retention-days: 30
-          if-no-files-found: error
-"""
-
-path = Path("/mnt/data/gerar-base-SIMPLIFICADO.yml")
-path.write_text(workflow, encoding="utf-8")
-
-print(f"Arquivo criado: {path}")
-print(f"{len(workflow.splitlines())} linhas")
+      - name: Testar workflow
+        run: echo "Workflow funcionando corretamente."
