@@ -1,0 +1,41 @@
+ARQUIVOS PARA O REPOSITÓRIO Visualizador-Pocos
+================================================
+
+Copie a estrutura deste pacote para a raiz do repositório:
+
+Visualizador-Pocos/
+├── .github/
+│   └── workflows/
+│       └── gerar-base.yml
+├── dados/
+│   └── entrada/
+│       └── base_aprovada.png
+├── scripts/
+│   └── gerar_base.py
+├── requirements.txt
+└── .gitignore
+
+A Release deve ter:
+Tag: gebco
+Asset:
+GEBCO_20_Aug_2026_8e1383804eb4.zip
+
+COMO RODAR
+----------
+1. Abra o repositório no GitHub.
+2. Entre em Actions.
+3. Escolha "Gerar base batimetrica".
+4. Clique em "Run workflow".
+5. Aguarde a execução terminar.
+6. Abra a execução concluída.
+7. Em Artifacts, baixe "base-amazonas-batimetria".
+
+O artifact contém:
+- PREVIA_base_com_batimetria.jpg
+- base_aprovada_com_batimetria.tif
+
+IMPORTANTE
+----------
+A batimetria e o hillshade vêm do GEBCO 2026.
+A imagem visual de fundo é uma composição cartográfica estilizada e não
+deve ser tratada como uma cena de satélite georreferenciada de precisão.
