@@ -112,67 +112,19 @@ jobs:
           sqlite3 saida/amazonas.mbtiles \\
             "SELECT name, value FROM metadata ORDER BY name;"
 
-      - name: Instalar PMTiles
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
+        - name: Instalar PMTiles
         run: |
-          set -euo pipefail
-
-          echo "Consultando a release mais recente do PMTiles..."
-
-          PMTILES_URL="$(
-            curl -fsSL \\
-              -H "Accept: application/vnd.github+json" \\
-              -H "Authorization: Bearer ${GH_TOKEN}" \\
-              "https://api.github.com/repos/protomaps/go-pmtiles/releases/latest" \\
-            | python -c '
-          import json
-          import sys
-
-          dados = json.load(sys.stdin)
-
-          candidatos = [
-              asset["browser_download_url"]
-              for asset in dados["assets"]
-              if "linux_x86_64" in asset["name"].lower()
-              and asset["name"].lower().endswith(".tar.gz")
-          ]
-
-          if not candidatos:
-              raise SystemExit(
-                  "Nao foi encontrado um asset Linux x86_64 .tar.gz."
-              )
-
-          print(candidatos[0])
-          '
-          )"
-
-          echo "Arquivo selecionado:"
-          echo "${PMTILES_URL}"
-
-          curl -fL \\
-            --retry 3 \\
-            --retry-delay 2 \\
-            "${PMTILES_URL}" \\
+          curl -fL \
+            "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz" \
             -o pmtiles.tar.gz
 
-          echo ""
-          echo "Arquivo PMTiles baixado:"
-          ls -lh pmtiles.tar.gz
-
           tar -xzf pmtiles.tar.gz
-          test -f pmtiles
 
-          sudo install \\
-            -m 0755 \\
-            pmtiles \\
-            /usr/local/bin/pmtiles
+          chmod +x pmtiles
 
-          echo ""
-          echo "PMTiles instalado:"
+          sudo mv pmtiles /usr/local/bin/pmtiles
+
           pmtiles version
-
       - name: Converter MBTiles para PMTiles
         shell: bash
         run: |
