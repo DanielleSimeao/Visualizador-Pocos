@@ -248,6 +248,14 @@
         }
 
 
+        /*
+         * Desloca os controles Leaflet do canto superior direito
+         * para a esquerda do painel lateral flutuante.
+         */
+        .leaflet-top.leaflet-right {
+            right: 325px;
+        }
+
         .area-study-control {
             background: rgba(255,255,255,0.55);
             border: 1px solid rgba(23,50,77,0.35);
@@ -327,6 +335,10 @@
         }
 
         @media (max-width: 900px) {
+            .leaflet-top.leaflet-right {
+                right: 300px;
+            }
+
             aside {
                 top: 8px;
                 right: 8px;
@@ -338,7 +350,15 @@
                 padding: 8px;
             }
         }
-    </style>
+    
+        @media (max-width: 650px) {
+            .leaflet-top.leaflet-right {
+                right: auto;
+                left: 52px;
+            }
+        }
+
+</style>
 </head>
 
 <body>
