@@ -1,44 +1,102 @@
-from pathlib import Path
+<!DOCTYPE html>
+<html lang="pt-BR">
 
-src = Path("/mnt/data/index-LIMPO-SEM-TEXTO-RODAPE.html")
-if not src.exists():
-    raise FileNotFoundError("Não encontrei o HTML mais recente.")
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-html = src.read_text(encoding="utf-8")
+    <title>Visualizador de Poços</title>
 
-# 1) Remover o texto "Norte geográfico" do controle.
-html = html.replace(
-    '''                <div class="rotulo">Norte<br>geográfico</div>
-''',
-    ''
-)
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
 
-# 2) Remover CSS do rótulo, caso exista.
-html = html.replace(
-    '''        .north-arrow .rotulo {
-            margin-top: 2px;
-            font-size: 9px;
-            color: #4e5d69;
-            line-height: 1.1;
+    <style>
+        :root {
+            --azul-escuro: #17324d;
+            --azul: #285879;
+            --cinza-fundo: #edf1f4;
+            --cinza-borda: #d6dde3;
+            --texto: #1f2933;
+            --branco: #ffffff;
+            --amarelo: #ffd54a;
+            --verde: #2f7a46;
+            --vermelho: #b02a37;
         }
 
-''',
-    ''
-)
-
-# 3) Tornar a seta de norte mais compacta.
-html = html.replace(
-    '''        .north-arrow {
-            background: rgba(255,255,255,.95);
-            border: 1px solid #bfc9d1;
-            border-radius: 6px;
-            width: 52px;
-            padding: 6px 4px 4px;
-            text-align: center;
-            box-shadow: 0 1px 6px rgba(0,0,0,.20);
+        * {
+            box-sizing: border-box;
         }
-''',
-    '''        .north-arrow {
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--cinza-fundo);
+            color: var(--texto);
+        }
+
+        header {
+            background: var(--branco);
+            padding: 14px 22px;
+            border-bottom: 4px solid var(--azul-escuro);
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+
+        header h1 {
+            margin: 0;
+            color: var(--azul-escuro);
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            color: #526779;
+            font-size: 13px;
+        }
+
+        #layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 14px;
+            padding: 14px;
+        }
+
+        #mapa-container {
+            position: relative;
+            height: 700px;
+            background: #1a2530;
+            border: 1px solid var(--cinza-borda);
+            box-shadow: 0 2px 8px rgba(0,0,0,.12);
+            overflow: hidden;
+        }
+
+        #mapa {
+            width: 100%;
+            height: 100%;
+        }
+
+        #status {
+            position: absolute;
+            z-index: 1000;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,.94);
+            padding: 8px 12px;
+            border-radius: 5px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.25);
+            font-size: 12px;
+            color: var(--azul-escuro);
+            max-width: 80%;
+        }
+
+        /* Seta de norte */
+        .north-arrow {
             background: rgba(255,255,255,.95);
             border: 1px solid #bfc9d1;
             border-radius: 6px;
@@ -47,62 +105,526 @@ html = html.replace(
             text-align: center;
             box-shadow: 0 1px 6px rgba(0,0,0,.20);
         }
-'''
-)
 
-# 4) Garantir escala no canto inferior direito para não competir com a atribuição.
-old_scale = '''    L.control.scale({
-        position: "bottomleft",
-        metric: true,
-        imperial: false,
-        maxWidth: 120
-    }).addTo(mapa);
-'''
-new_scale = '''    L.control.scale({
-        position: "bottomright",
-        metric: true,
-        imperial: false,
-        maxWidth: 140
-    }).addTo(mapa);
-'''
-if old_scale in html:
-    html = html.replace(old_scale, new_scale)
-else:
-    # Insere após o fitBounds se por algum motivo o bloco não estiver presente.
-    anchor = '''    mapa.fitBounds(EXTENSAO);
-'''
-    if anchor in html:
-        html = html.replace(
-            anchor,
-            anchor + '''
-    /* Escala cartográfica */
+        .north-arrow .norte {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--azul-escuro);
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .north-arrow svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        aside {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--branco);
+            border: 1px solid var(--cinza-borda);
+            padding: 13px;
+            box-shadow: 0 2px 7px rgba(0,0,0,.08);
+        }
+
+        .card h2 {
+            margin: 0 0 10px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid var(--cinza-borda);
+            color: var(--azul-escuro);
+            font-size: 16px;
+        }
+
+        .card p, .info {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .fonte {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #44535f;
+        }
+
+        .fonte strong,
+        .info strong {
+            color: var(--azul-escuro);
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #bdc8d0;
+            border-radius: 4px;
+            background: white;
+            color: var(--texto);
+        }
+
+        .info {
+            margin-bottom: 8px;
+        }
+
+        .ok {
+            color: var(--verde);
+            font-weight: 700;
+        }
+
+        .erro {
+            color: var(--vermelho);
+            font-weight: 700;
+        }
+
+        .botao {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 9px 12px;
+            background: var(--azul-escuro);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .botao:hover {
+            background: var(--azul);
+        }
+
+        .nota {
+            margin-top: 8px;
+            padding: 8px 9px;
+            border-left: 3px solid var(--azul);
+            background: #f4f8fa;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .legenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .legenda-poco {
+            width: 20px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        footer {
+            background: var(--branco);
+            border-top: 1px solid var(--cinza-borda);
+            padding: 10px 18px;
+            color: #53616b;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .leaflet-control-attribution {
+            font-size: 10px;
+        }
+
+        .leaflet-control-scale-line {
+            border-color: #17324d !important;
+            color: #17324d !important;
+            background: rgba(255,255,255,.92) !important;
+            font-weight: 700;
+        }
+
+        .well-div-icon {
+            background: transparent;
+            border: none;
+        }
+
+        .well-div-icon svg {
+            overflow: visible;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+        }
+
+        @media (max-width: 900px) {
+            #layout {
+                grid-template-columns: 1fr;
+            }
+
+            #mapa-container {
+                height: 560px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Visualizador de Poços</h1>
+
+    <p>
+        Poços e perfis compostos sobre imagem de satélite da Margem Equatorial Brasileira
+    </p>
+</header>
+
+<main id="layout">
+
+    <section id="mapa-container">
+        <div id="status">Carregando imagem de satélite...</div>
+        <div id="mapa"></div>
+    </section>
+
+    <aside>
+
+        <div class="card">
+            <h2>Localizar poço</h2>
+
+            <select id="seletor-pocos" disabled>
+                <option>Carregando poços...</option>
+            </select>
+
+            <p>
+                Selecione um poço na lista ou clique diretamente
+                sobre um símbolo no mapa.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Poço selecionado</h2>
+
+            <div id="painel-poco">
+                <p>Nenhum poço selecionado.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Imagem de satélite</h2>
+
+            <p id="status-base">
+                Base cartográfica: carregando...
+            </p>
+
+            <div class="fonte">
+                <p>
+                    <strong>Mapa-base:</strong><br>
+                    Esri World Imagery.
+                </p>
+
+                <p>
+                    <strong>Tipo de dado:</strong><br>
+                    mosaico global de imagens de satélite e,
+                    em determinadas regiões, imagens aéreas de
+                    alta resolução.
+                </p>
+
+                <p>
+                    <strong>Fonte:</strong><br>
+                    Serviço <em>World Imagery</em> da Esri.
+                </p>
+
+                <p>
+                    <strong>Fontes e colaboradores:</strong><br>
+                    Esri, Vantor, GeoEye, Earthstar Geographics,
+                    CNES/Airbus DS, USDA, USGS, AeroGRID, IGN,
+                    OpenStreetMap contributors, TomTom, Garmin,
+                    FAO, NOAA e GIS User Community.
+                </p>
+
+                <div class="nota">
+                    O provedor, a data de aquisição e a resolução da
+                    imagem podem variar conforme a localização e o
+                    nível de zoom. A atribuição também é mantida no
+                    canto do mapa.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Elementos cartográficos</h2>
+
+            <p>
+                O mapa apresenta:
+            </p>
+
+            <div class="legenda-item">
+                <span class="legenda-poco">
+                    <svg width="20" height="28" viewBox="0 0 28 40" aria-hidden="true">
+                        <path d="M14 1.5C7 1.5 1.5 7 1.5 14c0 10.2 12.5 24.2 12.5 24.2S26.5 24.2 26.5 14C26.5 7 21 1.5 14 1.5Z"
+                              fill="#ffd54a" stroke="#17324d" stroke-width="2"/>
+                        <path d="M14 9 L10 20 L12.8 20 L11.6 25 L16.4 25 L15.2 20 L18 20 Z"
+                              fill="#17324d"/>
+                        <line x1="14" y1="9" x2="14" y2="25" stroke="#17324d" stroke-width="1.5"/>
+                        <line x1="11.4" y1="14" x2="16.6" y2="14" stroke="#17324d" stroke-width="1.2"/>
+                        <line x1="12.2" y1="18" x2="15.8" y2="18" stroke="#17324d" stroke-width="1.1"/>
+                    </svg>
+                </span>
+                <span>Símbolo de poço</span>
+            </div>
+
+            <p>
+                <strong>Escala:</strong> no canto inferior direito do mapa.<br>
+                <strong>Norte:</strong> indicado pela seta "N".
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Dados dos poços</h2>
+
+            <p id="status-pocos">
+                Poços: aguardando...
+            </p>
+
+            <p>
+                <strong>Área de navegação:</strong><br>
+                65°W–30°W / 10°S–10°N
+            </p>
+        </div>
+
+    </aside>
+
+</main>
+
+<footer>
+    Imagem de fundo: Esri World Imagery. Os créditos dos provedores da
+    imagem são mantidos no mapa conforme as condições de atribuição do serviço.
+</footer>
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script>
+window.addEventListener("load", async function () {
+
+    const EXTENSAO = [
+        [-10, -65],
+        [10, -30]
+    ];
+
+    const CAMINHO_POCOS = "dados/pocos.geojson";
+
+    const mapa = L.map(
+        "mapa",
+        {
+            minZoom: 3,
+            maxZoom: 18,
+            maxBounds: EXTENSAO,
+            maxBoundsViscosity: 0.85
+        }
+    );
+
+    mapa.fitBounds(EXTENSAO);
+
+    /* Escala */
     L.control.scale({
         position: "bottomright",
         metric: true,
         imperial: false,
         maxWidth: 140
     }).addTo(mapa);
-'''
-        )
 
-# 5) Atualizar texto lateral para refletir a posição correta.
-html = html.replace(
-    '<strong>Escala:</strong> no canto inferior esquerdo do mapa.<br>',
-    '<strong>Escala:</strong> no canto inferior direito do mapa.<br>'
-)
-html = html.replace(
-    '<strong>Norte geográfico:</strong> indicado pela seta "N".',
-    '<strong>Norte:</strong> indicado pela seta "N".'
-)
+    /* Norte geográfico */
+    const NorthControl = L.Control.extend({
+        options: { position: "topleft" },
+        onAdd: function () {
+            const div = L.DomUtil.create("div", "north-arrow");
+            div.innerHTML = `
+                <div class="norte">N</div>
+                <svg width="18" height="36" viewBox="0 0 18 36" aria-hidden="true">
+                    <path d="M9 1 L16 19 H11.5 V35 H6.5 V19 H2 Z"
+                          fill="#17324d" stroke="#17324d" stroke-width="1"/>
+                </svg>
+            `;
+            return div;
+        }
+    });
+    mapa.addControl(new NorthControl());
 
-# 6) Verificações
-assert "L.control.scale" in html
-assert 'position: "bottomright"' in html
-assert "Norte<br>geográfico" not in html
+    const satelite = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+            minZoom: 3,
+            maxZoom: 18,
+            attribution:
+                "World Imagery © Esri — Sources: Vantor, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, OpenStreetMap contributors, TomTom, Garmin, FAO, NOAA e GIS User Community"
+        }
+    );
 
-out = Path("/mnt/data/index-SATELITE-ESCALA-NORTE-LIMPO.html")
-out.write_text(html, encoding="utf-8")
+    satelite.addTo(mapa);
 
-print("Arquivo criado:", out)
-print("Escala: canto inferior direito")
-print('Seta de norte: apenas "N" + seta')
+    satelite.on("load", function () {
+        document.getElementById("status-base").innerHTML =
+            '<span class="ok">Esri World Imagery carregado.</span>';
+
+        const status = document.getElementById("status");
+        status.textContent = "Imagem de satélite carregada.";
+
+        setTimeout(function () {
+            status.style.display = "none";
+        }, 1200);
+    });
+
+    satelite.on("tileerror", function () {
+        document.getElementById("status-base").innerHTML =
+            '<span class="erro">Erro ao carregar parte da imagem de satélite.</span>';
+    });
+
+    /* Símbolo de poço */
+    function criarIconePoco() {
+        const svg = `
+            <svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M14 1.5C7 1.5 1.5 7 1.5 14c0 10.2 12.5 24.2 12.5 24.2S26.5 24.2 26.5 14C26.5 7 21 1.5 14 1.5Z"
+                      fill="#ffd54a" stroke="#17324d" stroke-width="2"/>
+                <path d="M14 9 L10 20 L12.8 20 L11.6 25 L16.4 25 L15.2 20 L18 20 Z"
+                      fill="#17324d"/>
+                <line x1="14" y1="9" x2="14" y2="25" stroke="#17324d" stroke-width="1.5"/>
+                <line x1="11.4" y1="14" x2="16.6" y2="14" stroke="#17324d" stroke-width="1.2"/>
+                <line x1="12.2" y1="18" x2="15.8" y2="18" stroke="#17324d" stroke-width="1.1"/>
+            </svg>
+        `;
+
+        return L.divIcon({
+            className: "well-div-icon",
+            html: svg,
+            iconSize: [28, 40],
+            iconAnchor: [14, 38],
+            popupAnchor: [0, -34],
+            tooltipAnchor: [0, -28]
+        });
+    }
+
+    const grupoPocos = L.layerGroup().addTo(mapa);
+    const marcadores = new Map();
+
+    try {
+        const resposta = await fetch(CAMINHO_POCOS);
+
+        if (!resposta.ok) {
+            throw new Error("HTTP " + resposta.status);
+        }
+
+        const geojson = await resposta.json();
+        const seletor = document.getElementById("seletor-pocos");
+
+        seletor.innerHTML =
+            '<option value="">Selecione um poço...</option>';
+
+        const nomes = [];
+
+        geojson.features.forEach(function (feature) {
+
+            if (!feature.geometry || feature.geometry.type !== "Point") {
+                return;
+            }
+
+            const p = feature.properties || {};
+            const longitude = Number(feature.geometry.coordinates[0]);
+            const latitude = Number(feature.geometry.coordinates[1]);
+
+            if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+                return;
+            }
+
+            const nome =
+                p.cmmnWllNm ||
+                p.uwi ||
+                p.wellid ||
+                "Poço";
+
+            const marcador = L.marker(
+                [latitude, longitude],
+                { icon: criarIconePoco() }
+            );
+
+            marcador.bindTooltip(nome, {
+                direction: "top",
+                offset: [0, -28]
+            });
+
+            marcador.on("click", function () {
+
+                document.getElementById("painel-poco").innerHTML = `
+                    <div class="info">
+                        <strong>Poço</strong><br>
+                        ${nome}
+                    </div>
+
+                    <div class="info">
+                        <strong>Well ID</strong><br>
+                        ${p.wellid ?? "Não informado"}
+                    </div>
+
+                    <div class="info">
+                        <strong>UWI</strong><br>
+                        ${p.uwi ?? "Não informado"}
+                    </div>
+
+                    <div class="info">
+                        <strong>Latitude</strong><br>
+                        ${latitude.toFixed(6)}
+                    </div>
+
+                    <div class="info">
+                        <strong>Longitude</strong><br>
+                        ${longitude.toFixed(6)}
+                    </div>
+
+                    <a
+                        class="botao"
+                        href="perfis/${encodeURIComponent(nome)}.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Abrir perfil composto
+                    </a>
+                `;
+            });
+
+            marcador.addTo(grupoPocos);
+            marcadores.set(nome, marcador);
+            nomes.push(nome);
+        });
+
+        nomes.sort(function (a, b) {
+            return a.localeCompare(b, "pt-BR");
+        });
+
+        nomes.forEach(function (nome) {
+            const option = document.createElement("option");
+            option.value = nome;
+            option.textContent = nome;
+            seletor.appendChild(option);
+        });
+
+        seletor.disabled = false;
+
+        seletor.addEventListener("change", function () {
+            const marcador = marcadores.get(this.value);
+
+            if (!marcador) {
+                return;
+            }
+
+            mapa.setView(marcador.getLatLng(), 8);
+            marcador.fire("click");
+        });
+
+        document.getElementById("status-pocos").innerHTML =
+            '<span class="ok">' + nomes.length + ' poços carregados.</span>';
+
+    } catch (erro) {
+        console.error(erro);
+
+        document.getElementById("status-pocos").innerHTML =
+            '<span class="erro">Erro ao carregar ' + CAMINHO_POCOS + '.</span>';
+    }
+});
+</script>
+
+</body>
+</html>
