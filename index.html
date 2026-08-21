@@ -373,6 +373,32 @@
         </div>
 
         <div class="card">
+            <h2>Camadas</h2>
+
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="toggle-area-estudo">
+                <span>Exibir área de estudo</span>
+            </label>
+
+            <div style="margin-top:12px; font-size:12px; line-height:1.6;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:16px; height:16px; border-radius:50%; background:#ffd54a; border:2px solid #17324d; display:inline-block;"></span>
+                    <span>Poço com perfil composto</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:16px; height:16px; border-radius:50%; background:#a9a9a9; border:2px solid #4b5563; display:inline-block;"></span>
+                    <span>Poço sem perfil composto</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:24px; height:10px; border:2px solid #d7191c; background:rgba(215,25,28,.12); display:inline-block;"></span>
+                    <span>Área de estudo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
             <h2>Dados dos poços</h2>
 
             <p id="status-pocos">
@@ -407,6 +433,7 @@ window.addEventListener("load", async function () {
     ];
 
     const CAMINHO_POCOS = "dados/pocos.geojson";
+    const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
 
     /*
      * Perfis compostos atualmente disponíveis no repositório.
@@ -488,17 +515,85 @@ window.addEventListener("load", async function () {
             '<span class="erro">Erro ao carregar parte da imagem de satélite.</span>';
     });
 
+
+    /* =====================================================
+       ÁREA DE ESTUDO
+       ===================================================== */
+
+    let camadaAreaEstudo = null;
+
+    try {
+        const respostaArea = await fetch(CAMINHO_AREA_ESTUDO);
+
+        if (!respostaArea.ok) {
+            throw new Error("HTTP " + respostaArea.status);
+        }
+
+        const geojsonArea = await respostaArea.json();
+
+        camadaAreaEstudo = L.geoJSON(geojsonArea, {
+            interactive: false,
+            style: {
+                color: "#d7191c",
+                weight: 3,
+                opacity: 1,
+                fillColor: "#d7191c",
+                fillOpacity: 0.10
+            }
+        });
+
+        const toggleArea = document.getElementById("toggle-area-estudo");
+
+        toggleArea.addEventListener("change", function () {
+            if (!camadaAreaEstudo) return;
+
+            if (this.checked) {
+                camadaAreaEstudo.addTo(mapa);
+                camadaAreaEstudo.bringToFront();
+            } else {
+                mapa.removeLayer(camadaAreaEstudo);
+            }
+        });
+
+    } catch (erro) {
+        console.error("Erro ao carregar área de estudo:", erro);
+
+        const toggleArea = document.getElementById("toggle-area-estudo");
+        if (toggleArea) {
+            toggleArea.disabled = true;
+            toggleArea.parentElement.title =
+                "Não foi possível carregar dados/area_estudo.geojson";
+        }
+    }
+
+
     /* Símbolo de poço */
-    function criarIconePoco() {
+    function criarIconePoco(temPerfil) {
+
+        const preenchimento = temPerfil ? "#ffd54a" : "#a9a9a9";
+        const contorno = temPerfil ? "#17324d" : "#4b5563";
+        const simbolo = temPerfil ? "#17324d" : "#4b5563";
+
         const svg = `
-            <svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <svg width="28" height="40" viewBox="0 0 28 40"
+                 xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
                 <path d="M14 1.5C7 1.5 1.5 7 1.5 14c0 10.2 12.5 24.2 12.5 24.2S26.5 24.2 26.5 14C26.5 7 21 1.5 14 1.5Z"
-                      fill="#ffd54a" stroke="#17324d" stroke-width="2"/>
+                      fill="${preenchimento}"
+                      stroke="${contorno}"
+                      stroke-width="2"/>
+
                 <path d="M14 9 L10 20 L12.8 20 L11.6 25 L16.4 25 L15.2 20 L18 20 Z"
-                      fill="#17324d"/>
-                <line x1="14" y1="9" x2="14" y2="25" stroke="#17324d" stroke-width="1.5"/>
-                <line x1="11.4" y1="14" x2="16.6" y2="14" stroke="#17324d" stroke-width="1.2"/>
-                <line x1="12.2" y1="18" x2="15.8" y2="18" stroke="#17324d" stroke-width="1.1"/>
+                      fill="${simbolo}"/>
+
+                <line x1="14" y1="9" x2="14" y2="25"
+                      stroke="${simbolo}" stroke-width="1.5"/>
+
+                <line x1="11.4" y1="14" x2="16.6" y2="14"
+                      stroke="${simbolo}" stroke-width="1.2"/>
+
+                <line x1="12.2" y1="18" x2="15.8" y2="18"
+                      stroke="${simbolo}" stroke-width="1.1"/>
             </svg>
         `;
 
@@ -550,9 +645,11 @@ window.addEventListener("load", async function () {
                 p.wellid ||
                 "Poço";
 
+            const temPerfil = Boolean(PERFIS_DISPONIVEIS[nome]);
+
             const marcador = L.marker(
                 [latitude, longitude],
-                { icon: criarIconePoco() }
+                { icon: criarIconePoco(temPerfil) }
             );
 
             marcador.bindTooltip(nome, {
