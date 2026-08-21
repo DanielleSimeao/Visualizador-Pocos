@@ -1,4 +1,6 @@
-name: Gerar base batimetrica
+from pathlib import Path
+
+workflow = """name: Gerar base batimetrica
 
 on:
   workflow_dispatch:
@@ -7,26 +9,14 @@ permissions:
   contents: read
 
 jobs:
-
   gerar-base:
-
+    name: Gerar base e PMTiles
     runs-on: ubuntu-latest
-
     timeout-minutes: 30
 
     steps:
-
-      # ------------------------------------------------------
-      # REPOSITÓRIO
-      # ------------------------------------------------------
-
       - name: Baixar repositorio
         uses: actions/checkout@v4
-
-
-      # ------------------------------------------------------
-      # PYTHON
-      # ------------------------------------------------------
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -34,165 +24,195 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-
       - name: Instalar dependencias Python
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-
-      # ------------------------------------------------------
-      # GDAL
-      # ------------------------------------------------------
-
       - name: Instalar GDAL
+        shell: bash
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y \
-            gdal-bin \
-            python3-gdal
+          sudo apt-get install -y gdal-bin python3-gdal sqlite3
+          echo "Versao do GDAL:"
+          gdalinfo --version
 
-
-      # ------------------------------------------------------
-      # GEBCO
-      # ------------------------------------------------------
-
-      - name: Criar pasta temporaria
+      - name: Criar pastas de trabalho
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dados/temporario
-
+          mkdir -p saida
 
       - name: Baixar GEBCO da Release
+        shell: bash
         run: |
-          curl -L \
-            --fail \
-            --retry 3 \
-            -o gebco.zip \
+          set -euo pipefail
+          curl -fL \\
+            --retry 3 \\
+            --retry-delay 2 \\
+            -o gebco.zip \\
             "https://github.com/DanielleSimeao/Visualizador-Pocos/releases/download/gebco/GEBCO_20_Aug_2026_8e1383804eb4.zip"
-
+          echo "GEBCO baixado:"
+          ls -lh gebco.zip
 
       - name: Descompactar GEBCO
+        shell: bash
         run: |
+          set -euo pipefail
           unzip -q gebco.zip -d dados/temporario
+          echo "Arquivos encontrados:"
+          find dados/temporario -maxdepth 4 -type f -print
 
-          echo "Arquivos GEBCO encontrados:"
-
-          find dados/temporario \
-            -maxdepth 3 \
-            -type f \
-            -print
-
-
-      # ------------------------------------------------------
-      # GERAÇÃO DA BASE
-      # ------------------------------------------------------
-
-      - name: Executar processamento
+      - name: Executar processamento Python
+        shell: bash
         run: |
+          set -euo pipefail
           python scripts/gerar_base.py
 
-
-      # ------------------------------------------------------
-      # GEOTIFF → MBTILES
-      # ------------------------------------------------------
+      - name: Conferir GeoTIFF
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f saida/base_aprovada_com_batimetria.tif
+          echo "GeoTIFF gerado:"
+          ls -lh saida/base_aprovada_com_batimetria.tif
+          echo ""
+          echo "Informacoes do raster:"
+          gdalinfo saida/base_aprovada_com_batimetria.tif | head -n 40
 
       - name: Gerar MBTiles
+        shell: bash
         run: |
-
+          set -euo pipefail
           echo "Gerando MBTiles..."
-
-          gdal_translate \
-            saida/base_aprovada_com_batimetria.tif \
-            saida/amazonas.mbtiles \
-            -of MBTILES \
-            -co TILE_FORMAT=JPEG \
-            -co QUALITY=82 \
-            -co TYPE=baselayer \
-            -co NAME="Base Amazonas" \
-            -co DESCRIPTION="Base regional do Amazonas com batimetria GEBCO 2026" \
-            -co ZOOM_LEVEL_STRATEGY=UPPER \
-            -co RESAMPLING=BILINEAR
-
-
-      # ------------------------------------------------------
-      # NÍVEIS DE ZOOM MENORES
-      # ------------------------------------------------------
+          gdal_translate \\
+            saida/base_aprovada_com_batimetria.tif \\
+            saida/amazonas.mbtiles \\
+            -of MBTILES \\
+            -co TILE_FORMAT=JPEG \\
+            -co QUALITY=82
+          echo ""
+          echo "MBTiles criado:"
+          ls -lh saida/amazonas.mbtiles
 
       - name: Gerar niveis inferiores de zoom
+        shell: bash
         run: |
+          set -euo pipefail
+          gdaladdo \\
+            -r average \\
+            saida/amazonas.mbtiles \\
+            2 4 8 16 32 64
+          echo ""
+          echo "Metadados do MBTiles:"
+          sqlite3 saida/amazonas.mbtiles \\
+            "SELECT name, value FROM metadata ORDER BY name;"
 
-          echo "Gerando overviews..."
-
-          gdaladdo \
-            -r average \
-            saida/amazonas.mbtiles \
-            2 4 8 16 32
-
-
-      # ------------------------------------------------------
-      # INSTALA PMTILES
-      # ------------------------------------------------------
-
-        - name: Instalar PMTiles
+      - name: Instalar PMTiles
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fL \
-            "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz" \
+          set -euo pipefail
+
+          echo "Consultando a release mais recente do PMTiles..."
+
+          PMTILES_URL="$(
+            curl -fsSL \\
+              -H "Accept: application/vnd.github+json" \\
+              -H "Authorization: Bearer ${GH_TOKEN}" \\
+              "https://api.github.com/repos/protomaps/go-pmtiles/releases/latest" \\
+            | python -c '
+          import json
+          import sys
+
+          dados = json.load(sys.stdin)
+
+          candidatos = [
+              asset["browser_download_url"]
+              for asset in dados["assets"]
+              if "linux_x86_64" in asset["name"].lower()
+              and asset["name"].lower().endswith(".tar.gz")
+          ]
+
+          if not candidatos:
+              raise SystemExit(
+                  "Nao foi encontrado um asset Linux x86_64 .tar.gz."
+              )
+
+          print(candidatos[0])
+          '
+          )"
+
+          echo "Arquivo selecionado:"
+          echo "${PMTILES_URL}"
+
+          curl -fL \\
+            --retry 3 \\
+            --retry-delay 2 \\
+            "${PMTILES_URL}" \\
             -o pmtiles.tar.gz
 
+          echo ""
+          echo "Arquivo PMTiles baixado:"
+          ls -lh pmtiles.tar.gz
+
           tar -xzf pmtiles.tar.gz
+          test -f pmtiles
 
-          chmod +x pmtiles
-
-          sudo mv pmtiles /usr/local/bin/pmtiles
-
-          pmtiles version
-          
-      # ------------------------------------------------------
-      # MBTILES → PMTILES
-      # ------------------------------------------------------
-
-      - name: Converter MBTiles para PMTiles
-        run: |
-
-          echo "Convertendo para PMTiles..."
-
-          pmtiles convert \
-            saida/amazonas.mbtiles \
-            saida/amazonas.pmtiles
-
-
-      # ------------------------------------------------------
-      # TAMANHOS
-      # ------------------------------------------------------
-
-      - name: Mostrar resultados
-        run: |
-
-          echo "Arquivos gerados:"
-
-          ls -lh saida/
+          sudo install \\
+            -m 0755 \\
+            pmtiles \\
+            /usr/local/bin/pmtiles
 
           echo ""
+          echo "PMTiles instalado:"
+          pmtiles version
+
+      - name: Converter MBTiles para PMTiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Convertendo MBTiles para PMTiles..."
+          pmtiles convert \\
+            saida/amazonas.mbtiles \\
+            saida/amazonas.pmtiles
+          test -f saida/amazonas.pmtiles
+          echo ""
+          echo "PMTiles criado:"
+          ls -lh saida/amazonas.pmtiles
+
+      - name: Mostrar resultados
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Arquivos finais:"
+          ls -lh saida/
+          echo ""
           echo "Tamanho do PMTiles:"
-
           du -h saida/amazonas.pmtiles
+          echo ""
+          echo "Tamanho da previa:"
+          du -h saida/PREVIA_base_com_batimetria.jpg
 
-
-      # ------------------------------------------------------
-      # ARTIFACT
-      # ------------------------------------------------------
-
-      - name: Salvar resultados
+      - name: Salvar resultados como artifact
         uses: actions/upload-artifact@v4
-
         with:
-
           name: base-amazonas-pmtiles
-
           path: |
             saida/PREVIA_base_com_batimetria.jpg
             saida/amazonas.pmtiles
-
           retention-days: 30
-
           if-no-files-found: error
+"""
+
+out = Path("/mnt/data/gerar-base.yml")
+out.write_text(workflow, encoding="utf-8")
+
+print("Arquivo criado:", out)
+print("Tamanho:", out.stat().st_size, "bytes")
+
