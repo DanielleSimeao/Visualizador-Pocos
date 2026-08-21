@@ -3,21 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <title>Visualizador de Poços</title>
 
     <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
-        html,
-        body {
+        html, body {
             margin: 0;
             min-height: 100%;
             font-family: Arial, Helvetica, sans-serif;
@@ -26,7 +22,7 @@
         }
 
         header {
-            background: white;
+            background: #fff;
             padding: 14px 22px;
             border-bottom: 4px solid #17324d;
         }
@@ -53,7 +49,7 @@
         #mapa-container {
             position: relative;
             height: 700px;
-            background: #b7cbd6;
+            background: #d7d7d7;
             border: 1px solid #d6dde3;
         }
 
@@ -84,7 +80,7 @@
         }
 
         .card {
-            background: white;
+            background: #fff;
             border: 1px solid #d6dde3;
             padding: 13px;
             box-shadow: 0 2px 7px rgba(0,0,0,.08);
@@ -98,8 +94,7 @@
             font-size: 16px;
         }
 
-        .card p,
-        .info {
+        .card p, .info {
             font-size: 13px;
             line-height: 1.45;
         }
@@ -122,12 +117,12 @@
 
         .ok {
             color: #2f7a46;
-            font-weight: bold;
+            font-weight: 700;
         }
 
         .erro {
             color: #b02a37;
-            font-weight: bold;
+            font-weight: 700;
         }
 
         .botao {
@@ -135,14 +130,14 @@
             margin-top: 8px;
             padding: 9px 12px;
             background: #17324d;
-            color: white;
+            color: #fff;
             text-decoration: none;
             border-radius: 4px;
             font-size: 13px;
         }
 
         footer {
-            background: white;
+            background: #fff;
             border-top: 1px solid #d6dde3;
             padding: 10px 18px;
             color: #53616b;
@@ -165,13 +160,13 @@
 
 <header>
     <h1>Visualizador de Poços</h1>
-    <p>Poços, perfis compostos e contexto geoespacial do Cone do Amazonas</p>
+    <p>Poços, perfis compostos e base regional do Cone do Amazonas</p>
 </header>
 
 <main id="layout">
 
     <section id="mapa-container">
-        <div id="status">Inicializando mapa...</div>
+        <div id="status">Carregando base regional GEBCO...</div>
         <div id="mapa"></div>
     </section>
 
@@ -179,7 +174,6 @@
 
         <div class="card">
             <h2>Localizar poço</h2>
-
             <select id="seletor-pocos" disabled>
                 <option>Carregando poços...</option>
             </select>
@@ -187,7 +181,6 @@
 
         <div class="card">
             <h2>Poço selecionado</h2>
-
             <div id="painel-poco">
                 <p>Nenhum poço selecionado.</p>
             </div>
@@ -195,17 +188,10 @@
 
         <div class="card">
             <h2>Status dos dados</h2>
-
-            <p id="status-pmtiles">
-                PMTiles: aguardando...
-            </p>
-
-            <p id="status-pocos">
-                Poços: aguardando...
-            </p>
-
+            <p id="status-base">Base cartográfica: aguardando...</p>
+            <p id="status-pocos">Poços: aguardando...</p>
             <p>
-                <strong>Extensão regional:</strong><br>
+                <strong>Área exibida:</strong><br>
                 65°W–30°W / 10°S–10°N
             </p>
         </div>
@@ -215,196 +201,151 @@
 </main>
 
 <footer>
-    Batimetria: GEBCO 2026. Base cartográfica estilizada para visualização.
+    Base regional: GEBCO 2026. Camada alternativa: imagem de satélite Esri World Imagery.
 </footer>
 
-
-<script
-    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
-</script>
-
-<script
-    src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js">
-</script>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 window.addEventListener("load", async function () {
 
-    const statusGeral = document.getElementById("status");
-    const statusPM = document.getElementById("status-pmtiles");
-    const statusPocos = document.getElementById("status-pocos");
-
-    const EXTENSAO_REGIONAL = [
+    const EXTENSAO = [
         [-10, -65],
         [10, -30]
     ];
 
-    const CAMINHO_PMTILES = "dados/amazonas.pmtiles";
+    const CAMINHO_BASE = "dados/base_amazonas_web.jpg";
     const CAMINHO_POCOS = "dados/pocos.geojson";
 
-    /*
-     * Primeira verificação: Leaflet realmente carregou?
-     */
-    if (typeof L === "undefined") {
-        statusGeral.textContent =
-            "ERRO: Leaflet não carregou. Verifique a conexão/CDN.";
-        statusPM.innerHTML =
-            '<span class="erro">Leaflet indisponível.</span>';
-        return;
-    }
-
-    /*
-     * Segunda verificação: PMTiles realmente carregou?
-     */
-    if (typeof pmtiles === "undefined") {
-        statusGeral.textContent =
-            "ERRO: biblioteca PMTiles não carregou.";
-        statusPM.innerHTML =
-            '<span class="erro">Biblioteca PMTiles indisponível.</span>';
-        return;
-    }
-
-    /*
-     * Criação do mapa.
-     * A navegação fica limitada à nossa área regional.
-     */
     const mapa = L.map("mapa", {
         minZoom: 3,
-        maxZoom: 12,
-        maxBounds: EXTENSAO_REGIONAL,
-        maxBoundsViscosity: 0.85
+        maxZoom: 11,
+        maxBounds: EXTENSAO,
+        maxBoundsViscosity: 1.0
     });
 
-    mapa.fitBounds(EXTENSAO_REGIONAL);
+    mapa.fitBounds(EXTENSAO);
+
+    const status = document.getElementById("status");
+    const statusBase = document.getElementById("status-base");
+    const statusPocos = document.getElementById("status-pocos");
+
+    /* =====================================================
+       BASES CARTOGRÁFICAS
+       ===================================================== */
+
+    const baseGebco = L.imageOverlay(
+        CAMINHO_BASE,
+        EXTENSAO,
+        {
+            opacity: 1,
+            interactive: false
+        }
+    );
+
+    const baseSatelite = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+            minZoom: 3,
+            maxZoom: 18,
+            attribution:
+                "Imagem © Esri, Maxar, Earthstar Geographics e colaboradores"
+        }
+    );
 
     /*
-     * Evita que o usuário navegue para o globo todo.
+     * A base GEBCO abre por padrão.
      */
-    mapa.setMaxBounds(EXTENSAO_REGIONAL);
+    baseGebco.addTo(mapa);
 
+    /*
+     * Controle para alternar entre GEBCO e satélite.
+     * Como são "base layers", apenas uma fica ativa por vez.
+     */
+    const mapasBase = {
+        "Base regional GEBCO": baseGebco,
+        "Imagem de satélite": baseSatelite
+    };
+
+    L.control.layers(
+        mapasBase,
+        null,
+        {
+            collapsed: false,
+            position: "topright"
+        }
+    ).addTo(mapa);
+
+    baseGebco.on("load", function () {
+        statusBase.innerHTML =
+            '<span class="ok">Base regional GEBCO carregada.</span>';
+
+        status.textContent = "Base regional carregada.";
+
+        setTimeout(function () {
+            status.style.display = "none";
+        }, 1200);
+    });
+
+    baseGebco.on("error", function () {
+        statusBase.innerHTML =
+            '<span class="erro">Erro ao carregar ' +
+            CAMINHO_BASE +
+            '.</span>';
+
+        status.textContent =
+            "Erro ao carregar a imagem-base.";
+    });
+
+    mapa.on("baselayerchange", function (evento) {
+
+        /*
+         * Mantém sempre o usuário dentro do recorte regional.
+         */
+        mapa.setMaxBounds(EXTENSAO);
+
+        if (evento.layer === baseGebco) {
+            statusBase.innerHTML =
+                '<span class="ok">Base regional GEBCO ativa.</span>';
+        }
+
+        if (evento.layer === baseSatelite) {
+            statusBase.innerHTML =
+                '<span class="ok">Imagem de satélite ativa.</span>';
+        }
+    });
+
+    /* POÇOS */
     const grupoPocos = L.featureGroup().addTo(mapa);
     const marcadores = new Map();
 
-    /*
-     * ---------------------------------------------------------
-     * PMTILES
-     * ---------------------------------------------------------
-     */
     try {
 
-        statusGeral.textContent =
-            "Carregando base regional Amazonas + GEBCO...";
-
-        const arquivo =
-            new pmtiles.PMTiles(CAMINHO_PMTILES);
-
-        const header =
-            await arquivo.getHeader();
-
-        console.log("Cabeçalho PMTiles:", header);
-
-        const camada =
-            pmtiles.leafletRasterLayer(
-                arquivo,
-                {
-                    attribution: "Batimetria © GEBCO 2026",
-                    minZoom: Math.max(3, header.minZoom),
-                    maxNativeZoom: header.maxZoom,
-                    maxZoom: Math.min(12, header.maxZoom + 3)
-                }
-            );
-
-        camada.addTo(mapa);
-
-        /*
-         * IMPORTANTE:
-         * não usamos os bounds do PMTiles para enquadrar o mapa.
-         * Mantemos o recorte regional definido manualmente.
-         */
-        mapa.fitBounds(EXTENSAO_REGIONAL);
-
-        statusPM.innerHTML =
-            '<span class="ok">PMTiles carregado.</span>' +
-            "<br>Zoom nativo: " +
-            header.minZoom +
-            "–" +
-            header.maxZoom;
-
-        statusGeral.textContent =
-            "Base regional carregada.";
-
-        setTimeout(function () {
-            statusGeral.style.display = "none";
-        }, 1500);
-
-    } catch (erro) {
-
-        console.error("Erro PMTiles:", erro);
-
-        statusPM.innerHTML =
-            '<span class="erro">Erro ao carregar ' +
-            CAMINHO_PMTILES +
-            ".</span><br>" +
-            String(erro);
-
-        statusGeral.textContent =
-            "ERRO ao carregar a base PMTiles.";
-
-    }
-
-
-    /*
-     * ---------------------------------------------------------
-     * POÇOS
-     * ---------------------------------------------------------
-     */
-    try {
-
-        const resposta =
-            await fetch(CAMINHO_POCOS);
+        const resposta = await fetch(CAMINHO_POCOS);
 
         if (!resposta.ok) {
-            throw new Error(
-                "HTTP " + resposta.status +
-                " ao buscar " + CAMINHO_POCOS
-            );
+            throw new Error("HTTP " + resposta.status);
         }
 
-        const geojson =
-            await resposta.json();
-
-        const seletor =
-            document.getElementById("seletor-pocos");
+        const geojson = await resposta.json();
+        const seletor = document.getElementById("seletor-pocos");
 
         seletor.innerHTML =
             '<option value="">Selecione um poço...</option>';
 
-        const lista =
-            [];
+        const nomes = [];
 
-        geojson.features.forEach(function (feature) {
+        geojson.features.forEach(function(feature) {
 
-            if (
-                !feature.geometry ||
-                feature.geometry.type !== "Point"
-            ) {
+            if (!feature.geometry || feature.geometry.type !== "Point") {
                 return;
             }
 
-            const p =
-                feature.properties || {};
+            const p = feature.properties || {};
+            const longitude = Number(feature.geometry.coordinates[0]);
+            const latitude = Number(feature.geometry.coordinates[1]);
 
-            const longitude =
-                Number(feature.geometry.coordinates[0]);
-
-            const latitude =
-                Number(feature.geometry.coordinates[1]);
-
-            if (
-                !Number.isFinite(longitude) ||
-                !Number.isFinite(latitude)
-            ) {
+            if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
                 return;
             }
 
@@ -414,32 +355,25 @@ window.addEventListener("load", async function () {
                 p.wellid ||
                 "Poço";
 
-            const marcador =
-                L.circleMarker(
-                    [latitude, longitude],
-                    {
-                        radius: 6,
-                        color: "#17324d",
-                        weight: 2,
-                        fillColor: "#ffd54a",
-                        fillOpacity: 1
-                    }
-                );
-
-            marcador.bindTooltip(
-                nome,
+            const marcador = L.circleMarker(
+                [latitude, longitude],
                 {
-                    direction: "top",
-                    offset: [0, -5]
+                    radius: 6,
+                    color: "#17324d",
+                    weight: 2,
+                    fillColor: "#ffd54a",
+                    fillOpacity: 1
                 }
             );
 
+            marcador.bindTooltip(nome, {
+                direction: "top",
+                offset: [0, -5]
+            });
+
             marcador.on("click", function () {
 
-                document.getElementById(
-                    "painel-poco"
-                ).innerHTML = `
-
+                document.getElementById("painel-poco").innerHTML = `
                     <div class="info">
                         <strong>Poço</strong><br>
                         ${nome}
@@ -474,75 +408,54 @@ window.addEventListener("load", async function () {
                         Abrir perfil composto
                     </a>
                 `;
-
             });
 
             marcador.addTo(grupoPocos);
-
             marcadores.set(nome, marcador);
-
-            lista.push(nome);
-
+            nomes.push(nome);
         });
 
-        lista.sort(function (a, b) {
+        nomes.sort(function(a, b) {
             return a.localeCompare(b, "pt-BR");
         });
 
-        lista.forEach(function (nome) {
-
-            const opcao =
-                document.createElement("option");
-
-            opcao.value = nome;
-            opcao.textContent = nome;
-
-            seletor.appendChild(opcao);
-
+        nomes.forEach(function(nome) {
+            const option = document.createElement("option");
+            option.value = nome;
+            option.textContent = nome;
+            seletor.appendChild(option);
         });
 
         seletor.disabled = false;
 
-        seletor.addEventListener(
-            "change",
-            function () {
+        seletor.addEventListener("change", function () {
+            const marcador = marcadores.get(this.value);
 
-                const marcador =
-                    marcadores.get(this.value);
-
-                if (!marcador) {
-                    return;
-                }
-
-                mapa.setView(
-                    marcador.getLatLng(),
-                    8
-                );
-
-                marcador.fire("click");
-
+            if (!marcador) {
+                return;
             }
-        );
+
+            mapa.setView(marcador.getLatLng(), 8);
+            marcador.fire("click");
+        });
 
         statusPocos.innerHTML =
             '<span class="ok">' +
-            lista.length +
-            " poços carregados.</span>";
+            nomes.length +
+            ' poços carregados.</span>';
 
     } catch (erro) {
 
-        console.error("Erro GeoJSON:", erro);
+        console.error(erro);
 
         statusPocos.innerHTML =
             '<span class="erro">Erro ao carregar ' +
             CAMINHO_POCOS +
-            ".</span><br>" +
-            String(erro);
-
+            '.</span>';
     }
-
 });
 </script>
 
 </body>
+</html>
 </html>
