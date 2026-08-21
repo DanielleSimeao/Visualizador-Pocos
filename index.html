@@ -233,6 +233,33 @@
             font-size: 10px;
         }
 
+
+        .area-study-control {
+            background: rgba(255,255,255,0.55);
+            border: 1px solid rgba(23,50,77,0.35);
+            border-radius: 6px;
+            padding: 8px 10px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.18);
+            backdrop-filter: blur(2px);
+            color: #17324d;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .area-study-control label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            white-space: nowrap;
+            margin: 0;
+        }
+
+        .area-study-control input {
+            margin: 0;
+            cursor: pointer;
+        }
+
         .leaflet-control-scale-line {
             border-color: #17324d !important;
             color: #17324d !important;
@@ -371,34 +398,7 @@
                 <strong>Norte:</strong> indicado pela seta "N".
             </p>
         </div>
-
-        <div class="card">
-            <h2>Camadas</h2>
-
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" id="toggle-area-estudo">
-                <span>Exibir área de estudo</span>
-            </label>
-
-            <div style="margin-top:12px; font-size:12px; line-height:1.6;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="width:16px; height:16px; border-radius:50%; background:#ffd54a; border:2px solid #17324d; display:inline-block;"></span>
-                    <span>Poço com perfil composto</span>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="width:16px; height:16px; border-radius:50%; background:#a9a9a9; border:2px solid #4b5563; display:inline-block;"></span>
-                    <span>Poço sem perfil composto</span>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="width:24px; height:10px; border:2px solid #d7191c; background:rgba(215,25,28,.12); display:inline-block;"></span>
-                    <span>Área de estudo</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
+<div class="card">
             <h2>Dados dos poços</h2>
 
             <p id="status-pocos">
@@ -435,21 +435,63 @@ window.addEventListener("load", async function () {
     const CAMINHO_POCOS = "dados/pocos.geojson";
     const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
 
+
+    /*
+     * PERFIS COMPOSTOS — DETECÇÃO AUTOMÁTICA
+     *
+     * Padrão recomendado para novos arquivos:
+     * perfis/NOME-DO-POCO_perfil_composto.pdf
+     *
+     * Exemplo:
+     * perfis/1-APS-41-AP_perfil_composto.pdf
+     *
+     * O código também tenta alguns padrões antigos já usados no projeto.
+     */
+    async function localizarPerfil(nome) {
+
+        const candidatos = [
+            `perfis/${encodeURIComponent(nome)}_perfil_composto.pdf`,
+            `perfis/${encodeURIComponent(nome)}.pdf`
+        ];
+
+        /*
+         * Compatibilidade com o padrão antigo:
+         * 1APS_0047_AP_pasta_poco_pub.pdf
+         */
+        const match = nome.match(/^1-APS-(\d+)-AP$/i);
+
+        if (match) {
+            const numero = match[1].padStart(4, "0");
+
+            candidatos.push(
+                `perfis/1APS_${numero}_AP_pasta_poco_pub.pdf`
+            );
+        }
+
+        for (const url of candidatos) {
+            try {
+                const resposta = await fetch(url, {
+                    method: "HEAD",
+                    cache: "no-store"
+                });
+
+                if (resposta.ok) {
+                    return url;
+                }
+            } catch (erro) {
+                console.debug("Perfil não encontrado:", url);
+            }
+        }
+
+        return null;
+    }
+
+
     /*
      * Perfis compostos atualmente disponíveis no repositório.
      * A chave deve ser exatamente o nome do poço no GeoJSON.
      */
-    const PERFIS_DISPONIVEIS = {
-        "1-APS-30-AP": "perfis/1-APS-30-AP_perfil_composto.pdf",
-        "1-APS-32-AP": "perfis/1-APS-32-AP_perfil_composto.pdf",
-        "1-APS-35-AP": "perfis/1-APS-35-AP_perfil_composto.pdf",
-        "1-APS-38-AP": "perfis/1-APS-38-AP_perfil_composto.pdf",
-        "1-APS-41-AP": "perfis/1-APS-41-AP_perfil_composto.pdf",
-        "1-APS-47-AP": "perfis/1APS_0047_AP_pasta_poco_pub.pdf"
-    };
-
-
-    const mapa = L.map(
+const mapa = L.map(
         "mapa",
         {
             minZoom: 3,
@@ -542,28 +584,64 @@ window.addEventListener("load", async function () {
             }
         });
 
-        const toggleArea = document.getElementById("toggle-area-estudo");
+        const AreaStudyControl = L.Control.extend({
+            options: {
+                position: "topright"
+            },
 
-        toggleArea.addEventListener("change", function () {
-            if (!camadaAreaEstudo) return;
+            onAdd: function () {
+                const div = L.DomUtil.create(
+                    "div",
+                    "area-study-control"
+                );
 
-            if (this.checked) {
-                camadaAreaEstudo.addTo(mapa);
-                camadaAreaEstudo.bringToFront();
-            } else {
-                mapa.removeLayer(camadaAreaEstudo);
+                div.innerHTML = `
+                    <label>
+                        <input
+                            type="checkbox"
+                            id="toggle-area-estudo"
+                        >
+                        <span>Exibir área de estudo</span>
+                    </label>
+                `;
+
+                L.DomEvent.disableClickPropagation(div);
+                L.DomEvent.disableScrollPropagation(div);
+
+                const checkbox =
+                    div.querySelector("#toggle-area-estudo");
+
+                checkbox.addEventListener(
+                    "change",
+                    function () {
+
+                        if (!camadaAreaEstudo) {
+                            return;
+                        }
+
+                        if (this.checked) {
+                            camadaAreaEstudo.addTo(mapa);
+                            camadaAreaEstudo.bringToFront();
+                        } else {
+                            mapa.removeLayer(camadaAreaEstudo);
+                        }
+                    }
+                );
+
+                return div;
             }
         });
+
+        mapa.addControl(
+            new AreaStudyControl()
+        );
 
     } catch (erro) {
         console.error("Erro ao carregar área de estudo:", erro);
 
-        const toggleArea = document.getElementById("toggle-area-estudo");
-        if (toggleArea) {
-            toggleArea.disabled = true;
-            toggleArea.parentElement.title =
-                "Não foi possível carregar dados/area_estudo.geojson";
-        }
+        console.warn(
+            "Controle da área ficará indisponível."
+        );
     }
 
 
@@ -645,12 +723,30 @@ window.addEventListener("load", async function () {
                 p.wellid ||
                 "Poço";
 
-            const temPerfil = Boolean(PERFIS_DISPONIVEIS[nome]);
+            /*
+             * Começa cinza. A verificação do PDF acontece
+             * automaticamente logo abaixo.
+             */
+            let arquivoPerfil = null;
 
             const marcador = L.marker(
                 [latitude, longitude],
-                { icon: criarIconePoco(temPerfil) }
+                {
+                    icon: criarIconePoco(false)
+                }
             );
+
+            localizarPerfil(nome).then(function (urlPerfil) {
+
+                arquivoPerfil = urlPerfil;
+
+                marcador.setIcon(
+                    criarIconePoco(
+                        Boolean(urlPerfil)
+                    )
+                );
+
+            });
 
             marcador.bindTooltip(nome, {
                 direction: "top",
@@ -659,13 +755,13 @@ window.addEventListener("load", async function () {
 
             marcador.on("click", function () {
 
-                const arquivoPerfil = PERFIS_DISPONIVEIS[nome];
+                const perfilAtual = arquivoPerfil;
 
-                const blocoPerfil = arquivoPerfil
+                const blocoPerfil = perfilAtual
                     ? `
                         <a
                             class="botao"
-                            href="${arquivoPerfil}"
+                            href="${perfilAtual}"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
