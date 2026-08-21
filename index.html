@@ -673,6 +673,14 @@ const mapa = L.map(
                     <label>
                         <input
                             type="checkbox"
+                            id="toggle-perfis"
+                        >
+                        <span>Poços com perfil composto</span>
+                    </label>
+
+                    <label>
+                        <input
+                            type="checkbox"
                             id="toggle-cruz-2019"
                         >
                         <span>Poços — Cruz (2019)</span>
@@ -706,6 +714,24 @@ const mapa = L.map(
                         } else {
                             mapa.removeLayer(camadaAreaEstudo);
                         }
+                    }
+                );
+
+                const checkboxPerfis =
+                    div.querySelector("#toggle-perfis");
+
+                checkboxPerfis.addEventListener(
+                    "change",
+                    function () {
+
+                        perfisAtivos =
+                            this.checked;
+
+                        marcadores.forEach(
+                            function (marcador) {
+                                aplicarVisualMarcador(marcador);
+                            }
+                        );
                     }
                 );
 
@@ -751,12 +777,15 @@ const mapa = L.map(
         destaqueCruz2019 = false
     ) {
 
+        const mostrarPerfil =
+            perfisAtivos && temPerfil;
+
         const preenchimento = selecionado
             ? "#e31a1c"
             : (
                 destaqueCruz2019
                     ? "#35a853"
-                    : (temPerfil ? "#ffd54a" : "#a9a9a9")
+                    : (mostrarPerfil ? "#ffd54a" : "#a9a9a9")
               );
 
         const contorno = selecionado
@@ -764,7 +793,7 @@ const mapa = L.map(
             : (
                 destaqueCruz2019
                     ? "#0f5f2b"
-                    : (temPerfil ? "#17324d" : "#4b5563")
+                    : (mostrarPerfil ? "#17324d" : "#4b5563")
               );
 
         const simbolo = selecionado
@@ -772,7 +801,7 @@ const mapa = L.map(
             : (
                 destaqueCruz2019
                     ? "#ffffff"
-                    : (temPerfil ? "#17324d" : "#4b5563")
+                    : (mostrarPerfil ? "#17324d" : "#4b5563")
               );
 
         const svg = `
@@ -832,6 +861,7 @@ const mapa = L.map(
         "4A"
     ];
 
+    let perfisAtivos = false;
     let cruz2019Ativo = false;
     let totalCruz2019Encontrados = 0;
 
