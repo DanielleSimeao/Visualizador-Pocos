@@ -1,34 +1,17 @@
-from pathlib import Path
-
-html = r'''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Visualizador de Poços</title>
 
-    <!-- Leaflet -->
     <link
         rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
     >
 
     <style>
-        :root {
-            --azul-escuro: #17324d;
-            --azul: #285879;
-            --azul-claro: #eaf3f8;
-            --amarelo: #ffd54a;
-            --cinza-fundo: #edf1f4;
-            --cinza-borda: #d6dde3;
-            --texto: #1e2933;
-            --branco: #ffffff;
-            --vermelho: #b63d3d;
-            --verde: #36754a;
-        }
-
         * {
             box-sizing: border-box;
         }
@@ -37,24 +20,20 @@ html = r'''<!DOCTYPE html>
         body {
             margin: 0;
             min-height: 100%;
-        }
-
-        body {
             font-family: Arial, Helvetica, sans-serif;
-            background: var(--cinza-fundo);
-            color: var(--texto);
+            background: #edf1f4;
+            color: #1f2933;
         }
 
         header {
-            background: var(--branco);
-            border-bottom: 4px solid var(--azul-escuro);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+            background: white;
             padding: 14px 22px;
+            border-bottom: 4px solid #17324d;
         }
 
         header h1 {
             margin: 0;
-            color: var(--azul-escuro);
+            color: #17324d;
             font-size: 24px;
         }
 
@@ -73,162 +52,101 @@ html = r'''<!DOCTYPE html>
 
         #mapa-container {
             position: relative;
-            min-height: 690px;
+            height: 700px;
             background: #b7cbd6;
-            border: 1px solid var(--cinza-borda);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-            overflow: hidden;
+            border: 1px solid #d6dde3;
         }
 
         #mapa {
             width: 100%;
-            height: 690px;
+            height: 100%;
         }
 
-        #status-mapa {
+        #status {
             position: absolute;
             z-index: 1000;
+            top: 12px;
             left: 50%;
-            top: 14px;
             transform: translateX(-50%);
-            max-width: calc(100% - 40px);
+            background: rgba(255,255,255,.95);
             padding: 8px 12px;
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.93);
-            color: var(--azul-escuro);
+            box-shadow: 0 1px 6px rgba(0,0,0,.25);
             font-size: 12px;
-            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
-            pointer-events: none;
+            color: #17324d;
+            max-width: 80%;
         }
 
         aside {
             display: flex;
             flex-direction: column;
-            gap: 11px;
+            gap: 12px;
         }
 
         .card {
-            background: var(--branco);
-            border: 1px solid var(--cinza-borda);
-            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+            background: white;
+            border: 1px solid #d6dde3;
             padding: 13px;
+            box-shadow: 0 2px 7px rgba(0,0,0,.08);
         }
 
         .card h2 {
-            margin: 0 0 9px;
+            margin: 0 0 10px;
             padding-bottom: 7px;
-            border-bottom: 1px solid var(--cinza-borda);
-            color: var(--azul-escuro);
+            border-bottom: 1px solid #d6dde3;
+            color: #17324d;
             font-size: 16px;
         }
 
-        .card p {
-            margin: 7px 0;
+        .card p,
+        .info {
             font-size: 13px;
             line-height: 1.45;
         }
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--azul-escuro);
-            font-size: 12px;
-            font-weight: 700;
-        }
-
         select {
             width: 100%;
-            padding: 8px 9px;
+            padding: 8px;
             border: 1px solid #bdc8d0;
             border-radius: 4px;
             background: white;
-            color: var(--texto);
-            font-size: 13px;
         }
 
-        .informacao {
+        .info {
             margin-bottom: 8px;
-            font-size: 13px;
-            line-height: 1.35;
         }
 
-        .informacao strong {
-            color: var(--azul-escuro);
+        .info strong {
+            color: #17324d;
         }
 
-        .coordenadas {
-            font-family: Consolas, Monaco, monospace;
-            font-size: 12px;
+        .ok {
+            color: #2f7a46;
+            font-weight: bold;
         }
 
-        .botao-perfil {
+        .erro {
+            color: #b02a37;
+            font-weight: bold;
+        }
+
+        .botao {
             display: inline-block;
-            margin-top: 7px;
+            margin-top: 8px;
             padding: 9px 12px;
-            border-radius: 4px;
-            background: var(--azul-escuro);
+            background: #17324d;
             color: white;
             text-decoration: none;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .botao-perfil:hover {
-            background: var(--azul);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 7px;
-            margin-top: 3px;
             border-radius: 4px;
-            background: var(--azul-claro);
-            color: var(--azul-escuro);
-            font-size: 12px;
-        }
-
-        .status-ok {
-            color: var(--verde);
-        }
-
-        .status-erro {
-            color: var(--vermelho);
-        }
-
-        .legenda-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 7px 0;
-            font-size: 12px;
-        }
-
-        .legenda-poco {
-            width: 13px;
-            height: 13px;
-            flex: 0 0 13px;
-            border-radius: 50%;
-            background: var(--amarelo);
-            border: 2px solid var(--azul-escuro);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+            font-size: 13px;
         }
 
         footer {
-            padding: 11px 18px;
-            border-top: 1px solid var(--cinza-borda);
-            background: var(--branco);
+            background: white;
+            border-top: 1px solid #d6dde3;
+            padding: 10px 18px;
             color: #53616b;
             font-size: 11px;
-            line-height: 1.4;
-        }
-
-        .leaflet-control-layers {
-            font-size: 12px;
-        }
-
-        .leaflet-popup-content {
-            margin: 10px 13px;
-            font-size: 12px;
         }
 
         @media (max-width: 900px) {
@@ -236,9 +154,7 @@ html = r'''<!DOCTYPE html>
                 grid-template-columns: 1fr;
             }
 
-            #mapa-container,
-            #mapa {
-                min-height: 560px;
+            #mapa-container {
                 height: 560px;
             }
         }
@@ -249,15 +165,13 @@ html = r'''<!DOCTYPE html>
 
 <header>
     <h1>Visualizador de Poços</h1>
-    <p>
-        Poços, perfis compostos e contexto geoespacial do Cone do Amazonas
-    </p>
+    <p>Poços, perfis compostos e contexto geoespacial do Cone do Amazonas</p>
 </header>
 
 <main id="layout">
 
     <section id="mapa-container">
-        <div id="status-mapa">Carregando base cartográfica...</div>
+        <div id="status">Inicializando mapa...</div>
         <div id="mapa"></div>
     </section>
 
@@ -266,44 +180,33 @@ html = r'''<!DOCTYPE html>
         <div class="card">
             <h2>Localizar poço</h2>
 
-            <label for="poco-select">Selecione um poço</label>
-
-            <select id="poco-select" disabled>
-                <option value="">Carregando poços...</option>
+            <select id="seletor-pocos" disabled>
+                <option>Carregando poços...</option>
             </select>
-
-            <p>
-                Você também pode clicar diretamente em qualquer marcador no mapa.
-            </p>
         </div>
 
         <div class="card">
             <h2>Poço selecionado</h2>
 
-            <div id="informacoes-poco">
+            <div id="painel-poco">
                 <p>Nenhum poço selecionado.</p>
             </div>
         </div>
 
         <div class="card">
-            <h2>Camadas e dados</h2>
+            <h2>Status dos dados</h2>
 
-            <p>
-                <strong id="quantidade-pocos">Carregando poços...</strong>
+            <p id="status-pmtiles">
+                PMTiles: aguardando...
             </p>
 
-            <p id="status-base">
-                Base PMTiles: carregando...
+            <p id="status-pocos">
+                Poços: aguardando...
             </p>
 
-            <div class="legenda-item">
-                <span class="legenda-poco"></span>
-                <span>Poços</span>
-            </div>
-
             <p>
-                Use o controle de camadas no mapa para alternar entre a base
-                Amazonas + GEBCO e a imagem de satélite.
+                <strong>Extensão regional:</strong><br>
+                65°W–30°W / 10°S–10°N
             </p>
         </div>
 
@@ -312,78 +215,334 @@ html = r'''<!DOCTYPE html>
 </main>
 
 <footer>
-    Base batimétrica: GEBCO 2026. A composição visual utilizada como fundo é
-    cartográfica/estilizada. Visualizador em desenvolvimento.
+    Batimetria: GEBCO 2026. Base cartográfica estilizada para visualização.
 </footer>
 
 
-<!-- Leaflet -->
 <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
-<!-- PMTiles -->
 <script
-    src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js">
+    src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js">
 </script>
 
 
 <script>
-    /* =========================================================
-       CONFIGURAÇÃO
-       ========================================================= */
+window.addEventListener("load", async function () {
 
-    const CAMINHO_PMTILES = 'dados/base/amazonas.pmtiles';
-    const CAMINHO_POCOS = 'dados/pocos.geojson';
-    const PASTA_PERFIS = 'perfis';
+    const statusGeral = document.getElementById("status");
+    const statusPM = document.getElementById("status-pmtiles");
+    const statusPocos = document.getElementById("status-pocos");
 
-    /*
-     * Extensão de segurança usada enquanto o cabeçalho PMTiles
-     * ainda está sendo carregado.
-     */
-    const EXTENSAO_PADRAO = [
+    const EXTENSAO_REGIONAL = [
         [-10, -65],
         [10, -30]
     ];
 
-
-    /* =========================================================
-       MAPA
-       ========================================================= */
-
-    const mapa = L.map('mapa', {
-        zoomControl: true,
-        minZoom: 2,
-        maxZoom: 18
-    });
-
-    mapa.fitBounds(EXTENSAO_PADRAO);
-
-
-    /* =========================================================
-       BASE SATÉLITE OPCIONAL
-       ========================================================= */
-
-    const baseSatelite = L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        {
-            maxZoom: 18,
-            attribution:
-                'Imagery © Esri, Maxar, Earthstar Geographics e colaboradores'
-        }
-    );
-
-
-    /* =========================================================
-       GRUPO DOS POÇOS
-       ========================================================= */
-
-    const grupoPocos = L.featureGroup();
+    const CAMINHO_PMTILES = "dados/base/amazonas.pmtiles";
+    const CAMINHO_POCOS = "dados/pocos.geojson";
 
     /*
-     * Dicionário usado pelo seletor lateral
+     * Primeira verificação: Leaflet realmente carregou?
+     */
+    if (typeof L === "undefined") {
+        statusGeral.textContent =
+            "ERRO: Leaflet não carregou. Verifique a conexão/CDN.";
+        statusPM.innerHTML =
+            '<span class="erro">Leaflet indisponível.</span>';
+        return;
+    }
 
+    /*
+     * Segunda verificação: PMTiles realmente carregou?
+     */
+    if (typeof pmtiles === "undefined") {
+        statusGeral.textContent =
+            "ERRO: biblioteca PMTiles não carregou.";
+        statusPM.innerHTML =
+            '<span class="erro">Biblioteca PMTiles indisponível.</span>';
+        return;
+    }
+
+    /*
+     * Criação do mapa.
+     * A navegação fica limitada à nossa área regional.
+     */
+    const mapa = L.map("mapa", {
+        minZoom: 3,
+        maxZoom: 12,
+        maxBounds: EXTENSAO_REGIONAL,
+        maxBoundsViscosity: 0.85
+    });
+
+    mapa.fitBounds(EXTENSAO_REGIONAL);
+
+    /*
+     * Evita que o usuário navegue para o globo todo.
+     */
+    mapa.setMaxBounds(EXTENSAO_REGIONAL);
+
+    const grupoPocos = L.featureGroup().addTo(mapa);
+    const marcadores = new Map();
+
+    /*
+     * ---------------------------------------------------------
+     * PMTILES
+     * ---------------------------------------------------------
+     */
+    try {
+
+        statusGeral.textContent =
+            "Carregando base regional Amazonas + GEBCO...";
+
+        const arquivo =
+            new pmtiles.PMTiles(CAMINHO_PMTILES);
+
+        const header =
+            await arquivo.getHeader();
+
+        console.log("Cabeçalho PMTiles:", header);
+
+        const camada =
+            pmtiles.leafletRasterLayer(
+                arquivo,
+                {
+                    attribution: "Batimetria © GEBCO 2026",
+                    minZoom: Math.max(3, header.minZoom),
+                    maxNativeZoom: header.maxZoom,
+                    maxZoom: Math.min(12, header.maxZoom + 3)
+                }
+            );
+
+        camada.addTo(mapa);
+
+        /*
+         * IMPORTANTE:
+         * não usamos os bounds do PMTiles para enquadrar o mapa.
+         * Mantemos o recorte regional definido manualmente.
+         */
+        mapa.fitBounds(EXTENSAO_REGIONAL);
+
+        statusPM.innerHTML =
+            '<span class="ok">PMTiles carregado.</span>' +
+            "<br>Zoom nativo: " +
+            header.minZoom +
+            "–" +
+            header.maxZoom;
+
+        statusGeral.textContent =
+            "Base regional carregada.";
+
+        setTimeout(function () {
+            statusGeral.style.display = "none";
+        }, 1500);
+
+    } catch (erro) {
+
+        console.error("Erro PMTiles:", erro);
+
+        statusPM.innerHTML =
+            '<span class="erro">Erro ao carregar ' +
+            CAMINHO_PMTILES +
+            ".</span><br>" +
+            String(erro);
+
+        statusGeral.textContent =
+            "ERRO ao carregar a base PMTiles.";
+
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * POÇOS
+     * ---------------------------------------------------------
+     */
+    try {
+
+        const resposta =
+            await fetch(CAMINHO_POCOS);
+
+        if (!resposta.ok) {
+            throw new Error(
+                "HTTP " + resposta.status +
+                " ao buscar " + CAMINHO_POCOS
+            );
+        }
+
+        const geojson =
+            await resposta.json();
+
+        const seletor =
+            document.getElementById("seletor-pocos");
+
+        seletor.innerHTML =
+            '<option value="">Selecione um poço...</option>';
+
+        const lista =
+            [];
+
+        geojson.features.forEach(function (feature) {
+
+            if (
+                !feature.geometry ||
+                feature.geometry.type !== "Point"
+            ) {
+                return;
+            }
+
+            const p =
+                feature.properties || {};
+
+            const longitude =
+                Number(feature.geometry.coordinates[0]);
+
+            const latitude =
+                Number(feature.geometry.coordinates[1]);
+
+            if (
+                !Number.isFinite(longitude) ||
+                !Number.isFinite(latitude)
+            ) {
+                return;
+            }
+
+            const nome =
+                p.cmmnWllNm ||
+                p.uwi ||
+                p.wellid ||
+                "Poço";
+
+            const marcador =
+                L.circleMarker(
+                    [latitude, longitude],
+                    {
+                        radius: 6,
+                        color: "#17324d",
+                        weight: 2,
+                        fillColor: "#ffd54a",
+                        fillOpacity: 1
+                    }
+                );
+
+            marcador.bindTooltip(
+                nome,
+                {
+                    direction: "top",
+                    offset: [0, -5]
+                }
+            );
+
+            marcador.on("click", function () {
+
+                document.getElementById(
+                    "painel-poco"
+                ).innerHTML = `
+
+                    <div class="info">
+                        <strong>Poço</strong><br>
+                        ${nome}
+                    </div>
+
+                    <div class="info">
+                        <strong>Well ID</strong><br>
+                        ${p.wellid ?? "Não informado"}
+                    </div>
+
+                    <div class="info">
+                        <strong>UWI</strong><br>
+                        ${p.uwi ?? "Não informado"}
+                    </div>
+
+                    <div class="info">
+                        <strong>Latitude</strong><br>
+                        ${latitude.toFixed(6)}
+                    </div>
+
+                    <div class="info">
+                        <strong>Longitude</strong><br>
+                        ${longitude.toFixed(6)}
+                    </div>
+
+                    <a
+                        class="botao"
+                        href="perfis/${encodeURIComponent(nome)}.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Abrir perfil composto
+                    </a>
+                `;
+
+            });
+
+            marcador.addTo(grupoPocos);
+
+            marcadores.set(nome, marcador);
+
+            lista.push(nome);
+
+        });
+
+        lista.sort(function (a, b) {
+            return a.localeCompare(b, "pt-BR");
+        });
+
+        lista.forEach(function (nome) {
+
+            const opcao =
+                document.createElement("option");
+
+            opcao.value = nome;
+            opcao.textContent = nome;
+
+            seletor.appendChild(opcao);
+
+        });
+
+        seletor.disabled = false;
+
+        seletor.addEventListener(
+            "change",
+            function () {
+
+                const marcador =
+                    marcadores.get(this.value);
+
+                if (!marcador) {
+                    return;
+                }
+
+                mapa.setView(
+                    marcador.getLatLng(),
+                    8
+                );
+
+                marcador.fire("click");
+
+            }
+        );
+
+        statusPocos.innerHTML =
+            '<span class="ok">' +
+            lista.length +
+            " poços carregados.</span>";
+
+    } catch (erro) {
+
+        console.error("Erro GeoJSON:", erro);
+
+        statusPocos.innerHTML =
+            '<span class="erro">Erro ao carregar ' +
+            CAMINHO_POCOS +
+            ".</span><br>" +
+            String(erro);
+
+    }
+
+});
+</script>
 
 </body>
-
 </html>
