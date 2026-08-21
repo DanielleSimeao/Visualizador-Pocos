@@ -525,6 +525,9 @@ window.addEventListener("load", async function () {
     const CAMINHO_SISMICA_LEPLAC_DISPONIVEIS =
         "dados/sismica_leplac_disponiveis.geojson";
 
+    const CAMINHO_SISMICA_AREA_ESTUDO =
+        "dados/sismica_disponivel_area_estudo.geojson";
+
 
     /*
      * PERFIS COMPOSTOS — DETECÇÃO AUTOMÁTICA
@@ -652,6 +655,7 @@ const mapa = L.map(
     let camadaSismicaANPSolicitacao = null;
     let camadaSismicaANPDisponiveis = null;
     let camadaSismicaLEPLACDisponiveis = null;
+    let camadaSismicaAreaEstudo = null;
 
     try {
         const respostaArea = await fetch(CAMINHO_AREA_ESTUDO);
@@ -735,6 +739,16 @@ const mapa = L.map(
                             id="toggle-sismica-leplac"
                         >
                         <span>Sísmica LEPLAC (Disponíveis)</span>
+                    </label>
+
+                    <label>
+                        <input
+                            type="checkbox"
+                            id="toggle-sismica-area-estudo"
+                        >
+                        <span>
+                            Sísmica disponível na área de estudo
+                        </span>
                     </label>
                 `;
 
@@ -834,6 +848,21 @@ const mapa = L.map(
                         alternarCamadaSismica(
                             this,
                             camadaSismicaLEPLACDisponiveis
+                        );
+                    }
+                );
+
+                const checkboxAreaSismica =
+                    div.querySelector(
+                        "#toggle-sismica-area-estudo"
+                    );
+
+                checkboxAreaSismica.addEventListener(
+                    "change",
+                    function () {
+                        alternarCamadaSismica(
+                            this,
+                            camadaSismicaAreaEstudo
                         );
                     }
                 );
@@ -1118,6 +1147,112 @@ const mapa = L.map(
         const toggle =
             document.getElementById(
                 "toggle-sismica-leplac"
+            );
+
+        if (toggle) {
+            toggle.disabled = true;
+        }
+    }
+
+
+
+    /* =====================================================
+       SÍSMICA DISPONÍVEL NA ÁREA DE ESTUDO
+       ===================================================== */
+
+    try {
+
+        const resposta =
+            await fetch(
+                CAMINHO_SISMICA_AREA_ESTUDO
+            );
+
+        if (!resposta.ok) {
+            throw new Error(
+                "HTTP " +
+                resposta.status
+            );
+        }
+
+        const geojson =
+            await resposta.json();
+
+        camadaSismicaAreaEstudo =
+            L.geoJSON(
+                geojson,
+                {
+                    style: {
+                        color: "#7b2cbf",
+                        weight: 3.0,
+                        opacity: 0.95
+                    },
+
+                    onEachFeature:
+                        function (feature, layer) {
+
+                            const p =
+                                feature.properties || {};
+
+                            const nome =
+                                p.ssGmStNm ||
+                                p.ss2dUqLnId ||
+                                p.PROJETO ||
+                                "Linha sísmica";
+
+                            const fonte =
+                                p.FONTE_CAMADA ||
+                                "Dado sísmico disponível";
+
+                            layer.bindTooltip(
+                                nome,
+                                {
+                                    sticky: true,
+                                    direction: "top"
+                                }
+                            );
+
+                            layer.bindPopup(`
+                                <div style="min-width:220px; font-size:11px; line-height:1.4;">
+
+                                    <strong style="color:#17324d;">
+                                        Sísmica disponível na área de estudo
+                                    </strong>
+
+                                    <br><br>
+
+                                    <strong>Fonte:</strong><br>
+                                    ${fonte}
+
+                                    <br><br>
+
+                                    <strong>Linha:</strong><br>
+                                    ${nome}
+
+                                    <br><br>
+
+                                    <strong>Projeto:</strong><br>
+                                    ${
+                                        p.project ??
+                                        p.PROJETO ??
+                                        "Não informado"
+                                    }
+
+                                </div>
+                            `);
+                        }
+                }
+            );
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao carregar sísmica da área de estudo:",
+            erro
+        );
+
+        const toggle =
+            document.getElementById(
+                "toggle-sismica-area-estudo"
             );
 
         if (toggle) {
@@ -1495,5 +1630,4 @@ const mapa = L.map(
 </script>
 
 </body>
-</html>
 </html>
