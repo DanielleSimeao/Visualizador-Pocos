@@ -662,6 +662,14 @@ const mapa = L.map(
     let camadaSismicaLEPLACDisponiveis = null;
     let camadaSismicaAreaEstudo = null;
 
+    /*
+     * Estado inicial das camadas de poços:
+     * todos começam DESATIVADOS.
+     */
+    let todosPocosAtivos = false;
+    let perfisAtivos = false;
+    let cruz2019Ativo = false;
+
     try {
         const respostaArea = await fetch(CAMINHO_AREA_ESTUDO);
 
@@ -1350,20 +1358,24 @@ const mapa = L.map(
     const marcadores = new Map();
 
     /*
-     * Cruz (2019): somente os oito poços informados.
-     * O teste é por identificador completo para evitar falsos positivos.
+     * Cruz (2019)
+     *
+     * Somente estes oito códigos são considerados:
+     * 18, 23, 25, 24, 47B, 33E, 2A e 4A.
+     *
+     * A comparação usa APENAS o nome comum do poço
+     * (cmmnWllNm / nome exibido), evitando falsos positivos
+     * em Well ID, UWI ou outros atributos.
      */
-    const POCOS_CRUZ_2019 = new Set([
-        "1-APS-18-AP",
-        "1-APS-23-AP",
-        "1-APS-25-AP",
-        "1-APS-24-AP",
-        "1-APS-47B-AP",
-        "1-APS-33E-AP",
-        "1-APS-2A-AP",
-        "1-APS-4A-AP",
-        "1-PAS-2A-AP",
-        "1-PAS-4A-AP"
+    const CODIGOS_CRUZ_2019 = new Set([
+        "18",
+        "23",
+        "25",
+        "24",
+        "47B",
+        "33E",
+        "2A",
+        "4A"
     ]);
 
     function normalizarNomePoco(valor) {
@@ -1377,19 +1389,45 @@ const mapa = L.map(
             .replace(/^-+|-+$/g, "");
     }
 
+    function obterCodigoCruz2019(nome) {
+
+        const nomeNormalizado =
+            normalizarNomePoco(nome);
+
+        /*
+         * Exemplos aceitos:
+         * 1-APS-18-AP
+         * 1-APS-47B-AP
+         * 1-APS-33E-AP
+         * 1-APS-2A-AP
+         * 1-PAS-2A-AP
+         */
+        const match =
+            nomeNormalizado.match(
+                /(?:^|-)(?:APS|PAS)-([0-9]+[A-Z]?)(?:-|$)/
+            );
+
+        if (!match) {
+            return null;
+        }
+
+        return match[1];
+    }
+
     function ehPocoCruz2019(props, nome) {
-        return [
-            nome,
-            props?.cmmnWllNm,
-            props?.uwi,
-            props?.wellid,
-            props?.wllLocId
-        ]
-        .map(normalizarNomePoco)
-        .filter(Boolean)
-        .some(function (id) {
-            return POCOS_CRUZ_2019.has(id);
-        });
+
+        const nomePoco =
+            props?.cmmnWllNm ||
+            nome ||
+            "";
+
+        const codigo =
+            obterCodigoCruz2019(nomePoco);
+
+        return Boolean(
+            codigo &&
+            CODIGOS_CRUZ_2019.has(codigo)
+        );
     }
 
     let marcadorSelecionado = null;
@@ -1636,5 +1674,6 @@ localizarPerfil(nome).then(function (urlPerfil) {
 </script>
 
 </body>
+</html>
 </html>
 </html>
