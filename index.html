@@ -106,6 +106,7 @@
             max-width: 80%;
         }
 
+        /* Seta de norte */
         .north-arrow {
             background: rgba(255,255,255,.95);
             border: 1px solid #bfc9d1;
@@ -246,6 +247,16 @@
             font-size: 10px;
         }
 
+        /* Mantém os controles do mapa acessíveis acima do painel lateral. */
+        .leaflet-top,
+        .leaflet-bottom {
+            z-index: 1200 !important;
+        }
+
+        .leaflet-control {
+            pointer-events: auto;
+        }
+
         /*
          * Desloca os controles Leaflet do canto superior direito
          * para a esquerda do painel lateral flutuante.
@@ -255,12 +266,12 @@
         }
 
         .area-study-control {
-            background: rgba(255,255,255,0.55);
+            background: rgba(255,255,255,0.97);
             border: 1px solid rgba(23,50,77,0.35);
             border-radius: 6px;
             padding: 8px 10px;
             box-shadow: 0 1px 6px rgba(0,0,0,.18);
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(4px);
             color: #17324d;
             font-size: 12px;
             line-height: 1.3;
@@ -292,6 +303,20 @@
             margin-top: -1px;
             font-size: 9px;
             opacity: .82;
+        }
+
+        .area-study-control hr {
+            border: 0;
+            border-top: 1px solid rgba(23,50,77,.25);
+            margin: 7px 0;
+        }
+
+        .area-study-control .camadas-status {
+            min-height: 0;
+            margin-top: 5px;
+            font-size: 9px;
+            white-space: normal;
+            max-width: 220px;
         }
 
         .leaflet-control-scale-line {
@@ -387,6 +412,8 @@
                 Selecione um poço na lista ou clique diretamente
                 sobre um símbolo no mapa.
             </p>
+
+            <p id="status-pocos" class="info">Carregando poços...</p>
         </div>
 
         <div class="card">
@@ -518,8 +545,7 @@ window.addEventListener("load", async function () {
     const statusBase = document.getElementById("status-base");
 
     if (!window.L) {
-        statusMapa.textContent =
-            "Não foi possível carregar a biblioteca do mapa.";
+        statusMapa.textContent = "Não foi possível carregar a biblioteca do mapa.";
         statusMapa.classList.add("erro");
         statusBase.textContent = "Base cartográfica indisponível.";
         return;
@@ -530,12 +556,35 @@ window.addEventListener("load", async function () {
         preferCanvas: true
     }).fitBounds(EXTENSAO);
 
+    const controleNorte = L.control({ position: "topleft" });
+
+    controleNorte.onAdd = function () {
+        const elemento = L.DomUtil.create("div", "north-arrow");
+
+        elemento.setAttribute("aria-label", "Norte");
+        elemento.innerHTML = `
+            <div class="norte">N</div>
+            <svg width="24" height="30" viewBox="0 0 24 30" aria-hidden="true">
+                <path d="M12 1 L22 28 L12 22 L2 28 Z" fill="#17324d" stroke="#ffffff" stroke-width="1.5"></path>
+            </svg>
+        `;
+
+        return elemento;
+    };
+
+    controleNorte.addTo(mapa);
+
+    L.control.scale({
+        position: "bottomleft",
+        metric: true,
+        imperial: false
+    }).addTo(mapa);
+
     const camadaSatelite = L.tileLayer(
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         {
             maxZoom: 18,
-            attribution:
-                "Tiles © Esri — Sources: Esri, Maxar, Earthstar Geographics and the GIS User Community"
+            attribution: "Tiles © Esri — Sources: Esri, Maxar, Earthstar Geographics and the GIS User Community"
         }
     ).addTo(mapa);
 
@@ -546,8 +595,7 @@ window.addEventListener("load", async function () {
 
         primeiraImagemCarregada = true;
         statusMapa.hidden = true;
-        statusBase.textContent =
-            "Base cartográfica: imagem de satélite carregada.";
+        statusBase.textContent = "Base cartográfica: imagem de satélite carregada.";
     });
 
     camadaSatelite.on("tileerror", function () {
@@ -583,15 +631,7 @@ window.addEventListener("load", async function () {
 
         return L.divIcon({
             className: "",
-            html: `<span style="
-                display:block;
-                width:18px;
-                height:18px;
-                border-radius:50%;
-                background:${cor};
-                border:2px solid ${borda};
-                box-shadow:0 1px 4px #0008;
-            "></span>`,
+            html: `<span style="display:block;width:18px;height:18px;border-radius:50%;background:${cor};border:2px solid ${borda};box-shadow:0 1px 4px #0008;"></span>`,
             iconSize: [18, 18],
             iconAnchor: [9, 9]
         });
@@ -605,23 +645,19 @@ window.addEventListener("load", async function () {
     const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
     const CAMINHO_SISMICA_ANP_SOLICITACAO =
         "dados/sismica2d_anp_web.geojson";
-
     const CAMINHO_SISMICA_ANP_DISPONIVEIS =
         "dados/sismica2d_anp_disponiveis.geojson";
-
     const CAMINHO_SISMICA_LEPLAC_DISPONIVEIS =
         "dados/sismica_leplac_disponiveis.geojson";
-
     const CAMINHO_SISMICA_AREA_ESTUDO =
         "dados/sismica_disponivel_area_estudo.geojson";
 
     /*
      * PERFIS COMPOSTOS
-     * Inclui os perfis anteriores e os 27 novos arquivos recebidos.
+     * Inclui os perfis anteriores e os novos arquivos recebidos.
      * O nome de cada item corresponde ao nome do PDF sem a extensão.
      */
     const PERFIS_COMPOSTOS = [
-        // Perfis que já estavam disponíveis
         "1-APS-1-AP",
         "1-APS-11-AP",
         "1-APS-12-AP",
@@ -640,8 +676,6 @@ window.addEventListener("load", async function () {
         "1-APS-6-AP",
         "1-APS-7-AP",
         "1-PAS-2A-AP",
-
-        // Novos perfis
         "1-APS-4-AP",
         "1-APS-9-AP",
         "1-APS-10B-AP",
@@ -764,7 +798,7 @@ window.addEventListener("load", async function () {
                     cache: "no-store"
                 });
 
-                // Alguns servidores não aceitam requisições HEAD.
+                // Alguns servidores não aceitam HEAD.
                 if (resposta.status === 405 || resposta.status === 501) {
                     resposta = await fetch(url, {
                         method: "GET",
@@ -783,13 +817,7 @@ window.addEventListener("load", async function () {
     }
 
     /*
-     * Cruz (2019)
-     *
-     * Somente estes oito códigos são considerados:
-     * 18, 23, 25, 24, 47B, 33E, 2A e 4A.
-     *
-     * A comparação usa apenas o nome comum do poço
-     * (cmmnWllNm / nome exibido).
+     * Cruz (2019): somente estes códigos são considerados.
      */
     const CODIGOS_CRUZ_2019 = new Set([
         "18",
@@ -869,6 +897,206 @@ window.addEventListener("load", async function () {
             atualizarVisibilidadeMarcador(marcador);
         });
     }
+
+    const CAMADAS_GEOJSON = {
+        area: {
+            caminho: CAMINHO_AREA_ESTUDO,
+            estilo: {
+                color: "#d7191c",
+                weight: 2,
+                fillColor: "#d7191c",
+                fillOpacity: 0.10
+            }
+        },
+        anpSolicitacao: {
+            caminho: CAMINHO_SISMICA_ANP_SOLICITACAO,
+            estilo: {
+                color: "#00c8f0",
+                weight: 2,
+                dashArray: "6 5"
+            }
+        },
+        anpDisponiveis: {
+            caminho: CAMINHO_SISMICA_ANP_DISPONIVEIS,
+            estilo: {
+                color: "#d81b60",
+                weight: 3
+            }
+        },
+        leplac: {
+            caminho: CAMINHO_SISMICA_LEPLAC_DISPONIVEIS,
+            estilo: {
+                color: "#f28e2b",
+                weight: 3
+            }
+        },
+        areaDisponivel: {
+            caminho: CAMINHO_SISMICA_AREA_ESTUDO,
+            estilo: {
+                color: "#7b2cbf",
+                weight: 3
+            }
+        }
+    };
+
+    const camadasGeoJSONCarregadas = new Map();
+
+    function criarControleCamadas() {
+        const controleCamadas = L.control({
+            position: "topright"
+        });
+
+        controleCamadas.onAdd = function () {
+            const painel = L.DomUtil.create(
+                "div",
+                "area-study-control leaflet-control"
+            );
+
+            painel.innerHTML = `
+                <div class="control-title">Camadas do mapa</div>
+
+                <label>
+                    <input type="checkbox" data-tipo-poco="todos" checked>
+                    Todos os poços
+                </label>
+
+                <label>
+                    <input type="checkbox" data-tipo-poco="perfis">
+                    Poços com perfil composto
+                </label>
+
+                <label>
+                    <input type="checkbox" data-tipo-poco="cruz">
+                    Poços de Cruz (2019)
+                </label>
+
+                <hr>
+
+                <label>
+                    <input type="checkbox" data-camada="area">
+                    Área de estudo
+                </label>
+
+                <label>
+                    <input type="checkbox" data-camada="anpSolicitacao">
+                    Sísmica ANP em solicitação
+                </label>
+
+                <label>
+                    <input type="checkbox" data-camada="anpDisponiveis">
+                    Sísmica ANP disponível
+                </label>
+
+                <label>
+                    <input type="checkbox" data-camada="leplac">
+                    Sísmica LEPLAC disponível
+                </label>
+
+                <label>
+                    <input type="checkbox" data-camada="areaDisponivel">
+                    Sísmica disponível na área
+                </label>
+
+                <div class="camadas-status" aria-live="polite"></div>
+            `;
+
+            L.DomEvent.disableClickPropagation(painel);
+            L.DomEvent.disableScrollPropagation(painel);
+
+            return painel;
+        };
+
+        controleCamadas.addTo(mapa);
+
+        const painel = controleCamadas.getContainer();
+
+        painel.querySelectorAll("[data-tipo-poco]").forEach(function (input) {
+            input.addEventListener("change", function () {
+                const tipo = input.dataset.tipoPoco;
+
+                if (tipo === "todos") {
+                    todosPocosAtivos = input.checked;
+                } else if (tipo === "perfis") {
+                    perfisAtivos = input.checked;
+                } else if (tipo === "cruz") {
+                    cruz2019Ativo = input.checked;
+                }
+
+                atualizarTodosOsPocos();
+            });
+        });
+
+        painel.querySelectorAll("[data-camada]").forEach(function (input) {
+            input.addEventListener("change", function () {
+                alternarCamadaGeoJSON(
+                    input.dataset.camada,
+                    input,
+                    painel
+                );
+            });
+        });
+    }
+
+    async function alternarCamadaGeoJSON(id, input, painel) {
+        const camadaExistente = camadasGeoJSONCarregadas.get(id);
+        const status = painel.querySelector(".camadas-status");
+
+        if (!input.checked) {
+            if (camadaExistente && mapa.hasLayer(camadaExistente)) {
+                mapa.removeLayer(camadaExistente);
+            }
+
+            status.textContent = "";
+            return;
+        }
+
+        if (camadaExistente) {
+            camadaExistente.addTo(mapa);
+            status.textContent = "";
+            return;
+        }
+
+        const configuracao = CAMADAS_GEOJSON[id];
+
+        if (!configuracao) return;
+
+        input.disabled = true;
+        status.textContent = "Carregando camada...";
+
+        try {
+            const resposta = await fetch(configuracao.caminho);
+
+            if (!resposta.ok) {
+                throw new Error("HTTP " + resposta.status);
+            }
+
+            const geojson = await resposta.json();
+            const camada = L.geoJSON(geojson, {
+                style: configuracao.estilo
+            });
+
+            camadasGeoJSONCarregadas.set(id, camada);
+
+            if (input.checked) {
+                camada.addTo(mapa);
+                status.textContent = "";
+            }
+        } catch (erro) {
+            console.error(
+                "Erro ao carregar camada:",
+                configuracao.caminho,
+                erro
+            );
+
+            input.checked = false;
+            status.textContent =
+                "Não foi possível carregar essa camada. Verifique se o arquivo existe em dados/.";
+        } finally {
+            input.disabled = false;
+        }
+    }
+
+    criarControleCamadas();
 
     function aplicarVisualMarcador(marcador) {
         marcador.setIcon(
@@ -1064,7 +1292,6 @@ window.addEventListener("load", async function () {
                 nomes.length +
                 ' poços carregados.</span>';
         }
-
     } catch (erro) {
         console.error(erro);
 
