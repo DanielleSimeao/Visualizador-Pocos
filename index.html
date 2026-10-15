@@ -106,7 +106,6 @@
             max-width: 80%;
         }
 
-        /* Seta de norte */
         .north-arrow {
             background: rgba(255,255,255,.95);
             border: 1px solid #bfc9d1;
@@ -247,7 +246,6 @@
             font-size: 10px;
         }
 
-        /* Mantém os controles do mapa acessíveis acima do painel lateral. */
         .leaflet-top,
         .leaflet-bottom {
             z-index: 1200 !important;
@@ -257,10 +255,6 @@
             pointer-events: auto;
         }
 
-        /*
-         * Desloca os controles Leaflet do canto superior direito
-         * para a esquerda do painel lateral flutuante.
-         */
         .leaflet-top.leaflet-right {
             right: 325px;
         }
@@ -559,6 +553,11 @@
                 </div>
 
                 <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:24px; height:12px; border:2px solid #00a6a6; background:rgba(53,198,180,.25); display:inline-block;"></span>
+                    <span>Sub-bacias da Foz do Amazonas</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
                     <span style="width:25px; border-top:2px dashed #00c8f0; display:inline-block;"></span>
                     <span>Sísmica 2D pública — ANP (Em fase de solicitação)</span>
                 </div>
@@ -652,8 +651,10 @@ window.addEventListener("load", async function () {
     ).addTo(mapa);
 
     let primeiraImagemCarregada = false;
+
     camadaSatelite.on("tileload", function () {
         if (primeiraImagemCarregada) return;
+
         primeiraImagemCarregada = true;
         statusMapa.hidden = true;
         statusBase.textContent = "Base cartográfica: imagem de satélite carregada.";
@@ -661,8 +662,10 @@ window.addEventListener("load", async function () {
 
     camadaSatelite.on("tileerror", function () {
         if (!primeiraImagemCarregada) {
-            statusMapa.textContent = "A imagem de satélite não respondeu. Verifique a conexão e tente recarregar.";
-            statusBase.textContent = "Base cartográfica: não foi possível carregar as imagens.";
+            statusMapa.textContent =
+                "A imagem de satélite não respondeu. Verifique a conexão e tente recarregar.";
+            statusBase.textContent =
+                "Base cartográfica: não foi possível carregar as imagens.";
         }
     });
 
@@ -729,13 +732,14 @@ window.addEventListener("load", async function () {
     const CAMINHO_SISMICA_AREA_ESTUDO =
         "dados/sismica_disponivel_area_estudo.geojson";
 
+    const CAMINHO_SUBBACIAS_FOZ_AMAZONAS =
+        "dados/Amazonas_Cone_SubBasins.geojson";
+
     /*
-     * PERFIS COMPOSTOS
-     * Inclui os perfis anteriores e os novos arquivos recebidos.
-     * O nome de cada item corresponde ao nome do PDF sem a extensão.
+     * Perfis compostos. O nome de cada item corresponde ao nome do PDF
+     * sem a extensão.
      */
     const PERFIS_COMPOSTOS = [
-        // Perfis que já estavam disponíveis
         "1-APS-1-AP",
         "1-APS-11-AP",
         "1-APS-12-AP",
@@ -754,8 +758,6 @@ window.addEventListener("load", async function () {
         "1-APS-6-AP",
         "1-APS-7-AP",
         "1-PAS-2A-AP",
-
-        // Novos perfis
         "1-APS-4-AP",
         "1-APS-9-AP",
         "1-APS-10B-AP",
@@ -833,12 +835,10 @@ window.addEventListener("load", async function () {
         const nomesArquivo = [];
         if (arquivoConhecido) nomesArquivo.push(arquivoConhecido);
 
-        // O GeoJSON usa "1-APS-47B-A", mas o PDF está como "1-APS-47B-AP".
         if (chave === "1-APS-47B") {
             nomesArquivo.push("1-APS-47B-AP", "1-APS-47B-A");
         }
 
-        // Compatibilidade com variações antigas de sufixo.
         if (chave === "1-PAS-2A") {
             nomesArquivo.push("1-PAS-2A-AP", "1-PAS-2A-PA");
         }
@@ -873,7 +873,6 @@ window.addEventListener("load", async function () {
                     cache: "no-store"
                 });
 
-                // Alguns servidores não aceitam HEAD.
                 if (resposta.status === 405 || resposta.status === 501) {
                     resposta = await fetch(url, {
                         method: "GET",
@@ -891,14 +890,6 @@ window.addEventListener("load", async function () {
         return null;
     }
 
-    /*
-     * Cruz (2019)
-     *
-     * O poço 33E fica preparado na classificação, mas não aparece
-     * no GeoJSON atual e, por isso, não terá marcador.
-     *
-     * A comparação usa somente o nome comum do poço.
-     */
     const CODIGOS_CRUZ_2019 = new Set([
         "18",
         "23",
@@ -1040,6 +1031,15 @@ window.addEventListener("load", async function () {
                 color: "#7b2cbf",
                 weight: 3
             }
+        },
+        subbaciasFozAmazonas: {
+            caminho: CAMINHO_SUBBACIAS_FOZ_AMAZONAS,
+            estilo: {
+                color: "#00a6a6",
+                weight: 2,
+                fillColor: "#35c6b4",
+                fillOpacity: 0.16
+            }
         }
     };
 
@@ -1097,6 +1097,11 @@ window.addEventListener("load", async function () {
                 <label>
                     <input type="checkbox" data-camada="areaDisponivel">
                     Sísmica disponível na área
+                </label>
+
+                <label>
+                    <input type="checkbox" data-camada="subbaciasFozAmazonas">
+                    Sub-bacias da Foz do Amazonas
                 </label>
 
                 <div class="camadas-status" aria-live="polite"></div>
@@ -1170,7 +1175,16 @@ window.addEventListener("load", async function () {
             const geojson = await resposta.json();
 
             const camada = L.geoJSON(geojson, {
-                style: configuracao.estilo
+                style: configuracao.estilo,
+
+                onEachFeature: function (feature, camadaFeature) {
+                    const nomeSubbacia =
+                        feature.properties?.Sub_Bacia;
+
+                    if (nomeSubbacia) {
+                        camadaFeature.bindTooltip(nomeSubbacia);
+                    }
+                }
             });
 
             camadasGeoJSONCarregadas.set(id, camada);
@@ -1397,7 +1411,8 @@ window.addEventListener("load", async function () {
             marcador.fire("click");
         });
 
-        const statusPocos = document.getElementById("status-pocos");
+        const statusPocos =
+            document.getElementById("status-pocos");
 
         if (statusPocos) {
             statusPocos.innerHTML =
@@ -1408,7 +1423,8 @@ window.addEventListener("load", async function () {
     } catch (erro) {
         console.error(erro);
 
-        const statusPocos = document.getElementById("status-pocos");
+        const statusPocos =
+            document.getElementById("status-pocos");
 
         if (statusPocos) {
             statusPocos.innerHTML =
