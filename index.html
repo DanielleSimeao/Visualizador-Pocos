@@ -338,6 +338,56 @@
             filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
         }
 
+        .well-marker {
+            position: relative;
+            display: block;
+            width: 24px;
+            height: 36px;
+        }
+
+        .well-marker-dot {
+            position: absolute;
+            top: 10px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            border: 2px solid;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px #0008;
+        }
+
+        .well-marker-badge {
+            position: absolute;
+            z-index: 2;
+            top: -1px;
+            left: 5px;
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 0 0 1px #ffffff, 0 1px 3px #0008;
+        }
+
+        .well-marker-badge--bio {
+            color: #d7191c;
+            background: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .well-marker-badge--aux {
+            background: #7cdb35;
+            border: 1px solid #4c9c17;
+        }
+
+        .well-marker-badge--litologia {
+            background: #78a7d5;
+            border: 1px solid #477aa9;
+        }
+
         @keyframes piscarPocoSelecionado {
             0%, 100% {
                 opacity: 1;
@@ -486,6 +536,23 @@
                     <span>Poço de Cruz (2019), quando ativado</span>
                 </div>
 
+                <p style="margin:8px 0 4px;"><strong>Classificação Cruz et al. (2019)</strong></p>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:16px; text-align:center; color:#d7191c; font-size:18px; font-weight:bold; line-height:16px; display:inline-block;">★</span>
+                    <span>Dados biocronoestratigráficos usados no modelo de idades</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#7cdb35; border:1px solid #4c9c17; display:inline-block; margin:0 2px;"></span>
+                    <span>Informação cronoestratigráfica auxiliar</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
+                    <span style="width:12px; height:12px; border-radius:50%; background:#78a7d5; border:1px solid #477aa9; display:inline-block; margin:0 2px;"></span>
+                    <span>Dados usados para descrição litológica</span>
+                </div>
+
                 <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
                     <span style="width:24px; height:10px; border:2px solid #d7191c; background:rgba(215,25,28,.10); display:inline-block;"></span>
                     <span>Área de estudo</span>
@@ -557,10 +624,8 @@ window.addEventListener("load", async function () {
     }).fitBounds(EXTENSAO);
 
     const controleNorte = L.control({ position: "topleft" });
-
     controleNorte.onAdd = function () {
         const elemento = L.DomUtil.create("div", "north-arrow");
-
         elemento.setAttribute("aria-label", "Norte");
         elemento.innerHTML = `
             <div class="norte">N</div>
@@ -568,10 +633,8 @@ window.addEventListener("load", async function () {
                 <path d="M12 1 L22 28 L12 22 L2 28 Z" fill="#17324d" stroke="#ffffff" stroke-width="1.5"></path>
             </svg>
         `;
-
         return elemento;
     };
-
     controleNorte.addTo(mapa);
 
     L.control.scale({
@@ -589,10 +652,8 @@ window.addEventListener("load", async function () {
     ).addTo(mapa);
 
     let primeiraImagemCarregada = false;
-
     camadaSatelite.on("tileload", function () {
         if (primeiraImagemCarregada) return;
-
         primeiraImagemCarregada = true;
         statusMapa.hidden = true;
         statusBase.textContent = "Base cartográfica: imagem de satélite carregada.";
@@ -600,17 +661,13 @@ window.addEventListener("load", async function () {
 
     camadaSatelite.on("tileerror", function () {
         if (!primeiraImagemCarregada) {
-            statusMapa.textContent =
-                "A imagem de satélite não respondeu. Verifique a conexão e tente recarregar.";
-            statusBase.textContent =
-                "Base cartográfica: não foi possível carregar as imagens.";
+            statusMapa.textContent = "A imagem de satélite não respondeu. Verifique a conexão e tente recarregar.";
+            statusBase.textContent = "Base cartográfica: não foi possível carregar as imagens.";
         }
     });
 
     camadaSatelite.on("load", function () {
-        if (primeiraImagemCarregada) {
-            statusMapa.hidden = true;
-        }
+        if (primeiraImagemCarregada) statusMapa.hidden = true;
     });
 
     const grupoPocos = L.layerGroup().addTo(mapa);
@@ -620,20 +677,36 @@ window.addEventListener("load", async function () {
     let perfisAtivos = false;
     let cruz2019Ativo = false;
 
-    function criarIconePoco(temPerfil, selecionado, cruz2019) {
-        const cor = cruz2019
-            ? "#35a853"
-            : (temPerfil ? "#ffd54a" : "#a9a9a9");
+    function criarIconePoco(temPerfil, selecionado, cruz2019, classificacaoCruz) {
+        const perfilEmDestaque = Boolean(perfisAtivos && temPerfil);
+
+        const cor = perfilEmDestaque
+            ? "#ffd54a"
+            : (cruz2019 ? "#35a853" : "#a9a9a9");
 
         const borda = selecionado
             ? "#d7191c"
-            : (cruz2019 ? "#0f5f2b" : "#17324d");
+            : (perfilEmDestaque
+                ? "#17324d"
+                : (cruz2019 ? "#0f5f2b" : "#4b5563"));
+
+        const classeBadge = cruz2019 && classificacaoCruz
+            ? `well-marker-badge--${classificacaoCruz}`
+            : "";
+
+        const simboloBadge = classificacaoCruz === "bio"
+            ? "★"
+            : "";
+
+        const badge = classeBadge
+            ? `<span class="well-marker-badge ${classeBadge}">${simboloBadge}</span>`
+            : "";
 
         return L.divIcon({
-            className: "",
-            html: `<span style="display:block;width:18px;height:18px;border-radius:50%;background:${cor};border:2px solid ${borda};box-shadow:0 1px 4px #0008;"></span>`,
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+            className: "well-div-icon",
+            html: `<span class="well-marker"><span class="well-marker-dot" style="background:${cor};border-color:${borda};"></span>${badge}</span>`,
+            iconSize: [24, 36],
+            iconAnchor: [12, 19]
         });
     }
 
@@ -643,12 +716,16 @@ window.addEventListener("load", async function () {
 
     const CAMINHO_POCOS = "dados/pocos.geojson";
     const CAMINHO_AREA_ESTUDO = "dados/area_estudo.geojson";
+
     const CAMINHO_SISMICA_ANP_SOLICITACAO =
         "dados/sismica2d_anp_web.geojson";
+
     const CAMINHO_SISMICA_ANP_DISPONIVEIS =
         "dados/sismica2d_anp_disponiveis.geojson";
+
     const CAMINHO_SISMICA_LEPLAC_DISPONIVEIS =
         "dados/sismica_leplac_disponiveis.geojson";
+
     const CAMINHO_SISMICA_AREA_ESTUDO =
         "dados/sismica_disponivel_area_estudo.geojson";
 
@@ -658,6 +735,7 @@ window.addEventListener("load", async function () {
      * O nome de cada item corresponde ao nome do PDF sem a extensão.
      */
     const PERFIS_COMPOSTOS = [
+        // Perfis que já estavam disponíveis
         "1-APS-1-AP",
         "1-APS-11-AP",
         "1-APS-12-AP",
@@ -676,6 +754,8 @@ window.addEventListener("load", async function () {
         "1-APS-6-AP",
         "1-APS-7-AP",
         "1-PAS-2A-AP",
+
+        // Novos perfis
         "1-APS-4-AP",
         "1-APS-9-AP",
         "1-APS-10B-AP",
@@ -722,19 +802,16 @@ window.addEventListener("load", async function () {
         let match = normalizado.match(
             /(?:^|-)1-APS-([0-9]+[A-Z]?)(?:-|$)/
         );
-
         if (match) return `1-APS-${match[1]}`;
 
         match = normalizado.match(
             /(?:^|-)1-PAS-([0-9]+[A-Z]?)(?:-|$)/
         );
-
         if (match) return `1-PAS-${match[1]}`;
 
         match = normalizado.match(
             /(?:^|-)1-BP-([0-9]+)-APS(?:-|$)/
         );
-
         if (match) return `1-BP-${match[1]}-APS`;
 
         return null;
@@ -748,15 +825,13 @@ window.addEventListener("load", async function () {
 
     async function localizarPerfil(nome) {
         const chave = chavePerfilComposto(nome);
+
         const arquivoConhecido = chave
             ? ARQUIVOS_PERFIL_POR_CHAVE.get(chave)
             : null;
 
         const nomesArquivo = [];
-
-        if (arquivoConhecido) {
-            nomesArquivo.push(arquivoConhecido);
-        }
+        if (arquivoConhecido) nomesArquivo.push(arquivoConhecido);
 
         // O GeoJSON usa "1-APS-47B-A", mas o PDF está como "1-APS-47B-AP".
         if (chave === "1-APS-47B") {
@@ -817,7 +892,12 @@ window.addEventListener("load", async function () {
     }
 
     /*
-     * Cruz (2019): somente estes códigos são considerados.
+     * Cruz (2019)
+     *
+     * O poço 33E fica preparado na classificação, mas não aparece
+     * no GeoJSON atual e, por isso, não terá marcador.
+     *
+     * A comparação usa somente o nome comum do poço.
      */
     const CODIGOS_CRUZ_2019 = new Set([
         "18",
@@ -826,33 +906,60 @@ window.addEventListener("load", async function () {
         "24",
         "47B",
         "33E",
+        "45B",
         "2A",
-        "4A"
+        "4A",
+        "6",
+        "6A",
+        "BP-2",
+        "BP-3"
     ]);
 
-    function normalizarNomePoco(valor) {
-        return String(valor ?? "")
-            .trim()
-            .toUpperCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[_\s]+/g, "-")
-            .replace(/-+/g, "-")
-            .replace(/^-+|-+$/g, "");
-    }
+    const CLASSIFICACAO_CRUZ_2019 = {
+        "33E": "bio",
+        "45B": "bio",
+        "47B": "bio",
+        "25": "aux",
+        "6": "aux",
+        "6A": "aux",
+        "BP-2": "aux",
+        "BP-3": "aux"
+    };
+
+    const DESCRICOES_CLASSIFICACAO_CRUZ = {
+        bio: "Dados biocronoestratigráficos usados no modelo de idades, com base em nanofósseis calcários.",
+        aux: "Informação cronoestratigráfica auxiliar indicada no artigo.",
+        litologia: "Poço usado como apoio para descrição litológica, conforme a legenda do artigo."
+    };
 
     function obterCodigoCruz2019(nome) {
         const nomeNormalizado = normalizarNomePoco(nome);
+
+        const codigoBP = nomeNormalizado.match(
+            /(?:^|-)1-BP-([0-9]+)-APS(?:-|$)/
+        );
+
+        if (codigoBP) {
+            return `BP-${codigoBP[1]}`;
+        }
 
         const match = nomeNormalizado.match(
             /(?:^|-)(?:APS|PAS)-([0-9]+[A-Z]?)(?:-|$)/
         );
 
-        if (!match) {
+        if (!match) return null;
+
+        return match[1];
+    }
+
+    function obterClassificacaoCruz2019(nome) {
+        const codigo = obterCodigoCruz2019(nome);
+
+        if (!codigo || !CODIGOS_CRUZ_2019.has(codigo)) {
             return null;
         }
 
-        return match[1];
+        return CLASSIFICACAO_CRUZ_2019[codigo] || "litologia";
     }
 
     function ehPocoCruz2019(props, nome) {
@@ -863,10 +970,7 @@ window.addEventListener("load", async function () {
 
         const codigo = obterCodigoCruz2019(nomePoco);
 
-        return Boolean(
-            codigo &&
-            CODIGOS_CRUZ_2019.has(codigo)
-        );
+        return Boolean(codigo && CODIGOS_CRUZ_2019.has(codigo));
     }
 
     let marcadorSelecionado = null;
@@ -942,9 +1046,7 @@ window.addEventListener("load", async function () {
     const camadasGeoJSONCarregadas = new Map();
 
     function criarControleCamadas() {
-        const controleCamadas = L.control({
-            position: "topright"
-        });
+        const controleCamadas = L.control({ position: "topright" });
 
         controleCamadas.onAdd = function () {
             const painel = L.DomUtil.create(
@@ -1028,11 +1130,7 @@ window.addEventListener("load", async function () {
 
         painel.querySelectorAll("[data-camada]").forEach(function (input) {
             input.addEventListener("change", function () {
-                alternarCamadaGeoJSON(
-                    input.dataset.camada,
-                    input,
-                    painel
-                );
+                alternarCamadaGeoJSON(input.dataset.camada, input, painel);
             });
         });
     }
@@ -1057,7 +1155,6 @@ window.addEventListener("load", async function () {
         }
 
         const configuracao = CAMADAS_GEOJSON[id];
-
         if (!configuracao) return;
 
         input.disabled = true;
@@ -1071,6 +1168,7 @@ window.addEventListener("load", async function () {
             }
 
             const geojson = await resposta.json();
+
             const camada = L.geoJSON(geojson, {
                 style: configuracao.estilo
             });
@@ -1106,7 +1204,8 @@ window.addEventListener("load", async function () {
                 Boolean(
                     cruz2019Ativo &&
                     marcador._cruz2019
-                )
+                ),
+                marcador._classificacaoCruz
             )
         );
     }
@@ -1115,6 +1214,7 @@ window.addEventListener("load", async function () {
         if (marcadorSelecionado && marcadorSelecionado !== marcador) {
             marcadorSelecionado._selecionado = false;
             marcadorSelecionado.closeTooltip();
+
             aplicarVisualMarcador(marcadorSelecionado);
             atualizarVisibilidadeMarcador(marcadorSelecionado);
         }
@@ -1177,13 +1277,15 @@ window.addEventListener("load", async function () {
             const marcador = L.marker(
                 [latitude, longitude],
                 {
-                    icon: criarIconePoco(false, false)
+                    icon: criarIconePoco(false, false, false, null)
                 }
             );
 
             marcador._temPerfil = false;
             marcador._selecionado = false;
             marcador._cruz2019 = ehPocoCruz2019(p, nome);
+            marcador._classificacaoCruz =
+                obterClassificacaoCruz2019(nome);
 
             perfilCarregado = localizarPerfil(nome).then(function (urlPerfil) {
                 arquivoPerfil = urlPerfil;
@@ -1224,6 +1326,17 @@ window.addEventListener("load", async function () {
                         </div>
                       `;
 
+                const classificacaoCruz = marcador._classificacaoCruz;
+
+                const blocoClassificacaoCruz = classificacaoCruz
+                    ? `
+                        <div class="info">
+                            <strong>Classificação Cruz et al. (2019)</strong><br>
+                            ${DESCRICOES_CLASSIFICACAO_CRUZ[classificacaoCruz]}
+                        </div>
+                      `
+                    : "";
+
                 document.getElementById("painel-poco").innerHTML = `
                     <div class="info">
                         <strong>Poço</strong><br>
@@ -1250,6 +1363,7 @@ window.addEventListener("load", async function () {
                         ${longitude.toFixed(6)}
                     </div>
 
+                    ${blocoClassificacaoCruz}
                     ${blocoPerfil}
                 `;
             });
@@ -1283,8 +1397,7 @@ window.addEventListener("load", async function () {
             marcador.fire("click");
         });
 
-        const statusPocos =
-            document.getElementById("status-pocos");
+        const statusPocos = document.getElementById("status-pocos");
 
         if (statusPocos) {
             statusPocos.innerHTML =
@@ -1295,8 +1408,7 @@ window.addEventListener("load", async function () {
     } catch (erro) {
         console.error(erro);
 
-        const statusPocos =
-            document.getElementById("status-pocos");
+        const statusPocos = document.getElementById("status-pocos");
 
         if (statusPocos) {
             statusPocos.innerHTML =
