@@ -7,10 +7,7 @@
 
     <title>Visualizador de Poços</title>
 
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
     <style>
         :root {
@@ -553,7 +550,7 @@
                 </div>
 
                 <div style="display:flex; align-items:center; gap:7px; margin:4px 0;">
-                    <span style="width:24px; height:12px; border:2px solid #00a6a6; background:rgba(53,198,180,.25); display:inline-block;"></span>
+                    <span style="width:24px; height:12px; border:2px solid #d99a00; background:rgba(255,213,74,.35); display:inline-block;"></span>
                     <span>Sub-bacias da Foz do Amazonas</span>
                 </div>
 
@@ -623,6 +620,7 @@ window.addEventListener("load", async function () {
     }).fitBounds(EXTENSAO);
 
     const controleNorte = L.control({ position: "topleft" });
+
     controleNorte.onAdd = function () {
         const elemento = L.DomUtil.create("div", "north-arrow");
         elemento.setAttribute("aria-label", "Norte");
@@ -634,6 +632,7 @@ window.addEventListener("load", async function () {
         `;
         return elemento;
     };
+
     controleNorte.addTo(mapa);
 
     L.control.scale({
@@ -735,10 +734,6 @@ window.addEventListener("load", async function () {
     const CAMINHO_SUBBACIAS_FOZ_AMAZONAS =
         "dados/Amazonas_Cone_SubBasins.geojson";
 
-    /*
-     * Perfis compostos. O nome de cada item corresponde ao nome do PDF
-     * sem a extensão.
-     */
     const PERFIS_COMPOSTOS = [
         "1-APS-1-AP",
         "1-APS-11-AP",
@@ -891,19 +886,8 @@ window.addEventListener("load", async function () {
     }
 
     const CODIGOS_CRUZ_2019 = new Set([
-        "18",
-        "23",
-        "25",
-        "24",
-        "47B",
-        "33E",
-        "45B",
-        "2A",
-        "4A",
-        "6",
-        "6A",
-        "BP-2",
-        "BP-3"
+        "18", "23", "25", "24", "47B", "33E", "45B",
+        "2A", "4A", "6", "6A", "BP-2", "BP-3"
     ]);
 
     const CLASSIFICACAO_CRUZ_2019 = {
@@ -938,9 +922,7 @@ window.addEventListener("load", async function () {
             /(?:^|-)(?:APS|PAS)-([0-9]+[A-Z]?)(?:-|$)/
         );
 
-        if (!match) return null;
-
-        return match[1];
+        return match ? match[1] : null;
     }
 
     function obterClassificacaoCruz2019(nome) {
@@ -954,11 +936,7 @@ window.addEventListener("load", async function () {
     }
 
     function ehPocoCruz2019(props, nome) {
-        const nomePoco =
-            props?.cmmnWllNm ||
-            nome ||
-            "";
-
+        const nomePoco = props?.cmmnWllNm || nome || "";
         const codigo = obterCodigoCruz2019(nomePoco);
 
         return Boolean(codigo && CODIGOS_CRUZ_2019.has(codigo));
@@ -1035,10 +1013,10 @@ window.addEventListener("load", async function () {
         subbaciasFozAmazonas: {
             caminho: CAMINHO_SUBBACIAS_FOZ_AMAZONAS,
             estilo: {
-                color: "#00a6a6",
-                weight: 2,
-                fillColor: "#35c6b4",
-                fillOpacity: 0.16
+                color: "#d99a00",
+                weight: 2.5,
+                fillColor: "#ffd54a",
+                fillOpacity: 0.35
             }
         }
     };
@@ -1174,6 +1152,37 @@ window.addEventListener("load", async function () {
 
             const geojson = await resposta.json();
 
+            if (id === "subbaciasFozAmazonas") {
+                const nomeCRS = String(
+                    geojson.crs?.properties?.name || ""
+                );
+
+                const coordenadas = geojson.features
+                    ?.map(feature => feature.geometry?.coordinates)
+                    .find(Boolean);
+
+                const coordenadaInicial = encontrarCoordenada(coordenadas);
+
+                const coordenadasProjetadas =
+                    nomeCRS.includes("31976") ||
+                    (coordenadaInicial &&
+                        (Math.abs(coordenadaInicial[0]) > 180 ||
+                         Math.abs(coordenadaInicial[1]) > 90));
+
+                if (coordenadasProjetadas) {
+                    geojson.features.forEach(function (feature) {
+                        if (feature.geometry?.coordinates) {
+                            feature.geometry.coordinates =
+                                converterGeometriaUTM22N(
+                                    feature.geometry.coordinates
+                                );
+                        }
+                    });
+
+                    delete geojson.crs;
+                }
+            }
+
             const camada = L.geoJSON(geojson, {
                 style: configuracao.estilo,
 
@@ -1206,6 +1215,84 @@ window.addEventListener("load", async function () {
         } finally {
             input.disabled = false;
         }
+    }
+
+    function encontrarCoordenada(coordenadas) {
+        if (!Array.isArray(coordenadas)) return null;
+
+        if (typeof coordenadas[0] === "number") {
+            return coordenadas;
+        }
+
+        for (const item of coordenadas) {
+            const encontrada = encontrarCoordenada(item);
+            if (encontrada) return encontrada;
+        }
+
+        return null;
+    }
+
+    function converterGeometriaUTM22N(coordenadas) {
+        if (typeof coordenadas?.[0] === "number") {
+            return converterUTM22NParaWGS84(
+                coordenadas[0],
+                coordenadas[1]
+            );
+        }
+
+        return coordenadas.map(converterGeometriaUTM22N);
+    }
+
+    function converterUTM22NParaWGS84(easting, northing) {
+        const a = 6378137;
+        const f = 1 / 298.257222101;
+        const e2 = f * (2 - f);
+        const ep2 = e2 / (1 - e2);
+        const k0 = 0.9996;
+        const x = easting - 500000;
+        const y = northing;
+        const m = y / k0;
+        const mu = m / (
+            a * (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256)
+        );
+
+        const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+        const j1 = 3 * e1 / 2 - 27 * e1 ** 3 / 32;
+        const j2 = 21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32;
+        const j3 = 151 * e1 ** 3 / 96;
+        const j4 = 1097 * e1 ** 4 / 512;
+
+        const fp = mu
+            + j1 * Math.sin(2 * mu)
+            + j2 * Math.sin(4 * mu)
+            + j3 * Math.sin(6 * mu)
+            + j4 * Math.sin(8 * mu);
+
+        const sinFp = Math.sin(fp);
+        const cosFp = Math.cos(fp);
+        const tanFp = Math.tan(fp);
+        const n1 = a / Math.sqrt(1 - e2 * sinFp ** 2);
+        const t1 = tanFp ** 2;
+        const c1 = ep2 * cosFp ** 2;
+        const r1 = a * (1 - e2) / (1 - e2 * sinFp ** 2) ** 1.5;
+        const d = x / (n1 * k0);
+
+        const latitude = fp - (n1 * tanFp / r1) * (
+            d ** 2 / 2
+            - (5 + 3 * t1 + 10 * c1 - 4 * c1 ** 2 - 9 * ep2) * d ** 4 / 24
+            + (61 + 90 * t1 + 298 * c1 + 45 * t1 ** 2 - 252 * ep2 - 3 * c1 ** 2) * d ** 6 / 720
+        );
+
+        const longitude = Math.PI / 180 * -51 + (
+            d
+            - (1 + 2 * t1 + c1) * d ** 3 / 6
+            + (5 - 2 * c1 + 28 * t1 - 3 * c1 ** 2 + 8 * ep2 + 24 * t1 ** 2) * d ** 5 / 120
+        ) / cosFp;
+
+        return [
+            longitude * 180 / Math.PI,
+            latitude * 180 / Math.PI
+        ];
     }
 
     criarControleCamadas();
